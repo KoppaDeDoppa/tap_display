@@ -2,7 +2,7 @@
   "plaatoServer": "http://localhost:8085",
   "taps": [
     {
-      "id": "c4bcef98d105e59b249070feacdaf953",
+      "id": "KEG_AUTH_TOKEN_1",
       "name": "Tap 1",
       "beerName": "Vinnerpils!",
       "beerStyle": "ØL"
