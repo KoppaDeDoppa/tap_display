@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brewery Tap Display</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1 class="venue-name">Brewery Taproom</h1>
+    <div class="status-indicator" id="connectionStatus">
+      <span class="status-dot"></span>
+      <span class="status-text">Connecting...</span>
+    </div>
+  </header>
+
+  <main class="taps-grid" id="tapsGrid">
+    <!-- Tap cards will be dynamically generated here -->
+  </main>
+
+  <footer class="footer">
+    <div class="last-updated" id="lastUpdated">Last updated: --</div>
+    <div class="version">Tap Display v1.0</div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

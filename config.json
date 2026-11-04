@@ -1,0 +1,24 @@
+{
+  "plaatoServer": "http://localhost:8085",
+  "taps": [
+    {
+      "id": "c4bcef98d105e59b249070feacdaf953",
+      "name": "Tap 1",
+      "beerName": "Vinnerpils!",
+      "beerStyle": "ØL"
+    },
+    {
+      "id": "KEG_AUTH_TOKEN_2",
+      "name": "Tap 2",
+      "beerName": "Seasonal Stout",
+      "beerStyle": "Stout"
+    },
+    {
+      "id": "KEG_AUTH_TOKEN_3",
+      "name": "Tap 3",
+      "beerName": "Helles Lager",
+      "beerStyle": "Lager"
+    }
+  ],
+  "serverPort": 3000
+}

@@ -1,0 +1,44 @@
+services:
+  # Plaato Keg Bridge Server - connects to physical Plaato devices via Blynk protocol
+  open_plaato_keg:
+    image: ghcr.io/darkjaeger/open-plaato-keg:latest
+    container_name: open-plaato-keg
+    restart: unless-stopped
+    ports:
+      - "1234:1234"   # TCP port for Plaato device connections (Blynk protocol)
+      - "8085:8085"   # HTTP API, WebSocket, and Web UI
+    volumes:
+      - plaato-data:/db
+    environment:
+      - DATABASE_FILE_PATH=/db/keg_data.bin
+      - KEG_LISTENER_PORT=1234
+      - HTTP_LISTENER_PORT=8085
+      # Optional: Enable MQTT for Home Assistant / other integrations
+      # - MQTT_ENABLED=true
+      # - MQTT_HOST=192.168.1.100
+      # - MQTT_PORT=1883
+      # Optional: BarHelper integration
+      # - BARHELPER_ENABLED=false
+
+  # Tap Display Server - proxies Plaato API and serves the frontend
+  tap_display:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: brewery-tap-display
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PLAATO_SERVER=http://open_plaato_keg:8085
+      - SERVER_PORT=3000
+      - NODE_ENV=production
+    volumes:
+      # Mount config.json for easy editing without rebuilding
+      - ./config.json:/app/config.json:ro
+    depends_on:
+      - open_plaato_keg
+
+volumes:
+  plaato-data:
+    driver: local

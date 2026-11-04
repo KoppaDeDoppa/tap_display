@@ -1,0 +1,521 @@
+/* Brewery Tap Display - Bar/Taproom Aesthetic */
+/* Dark theme with amber/gold accents, high contrast for distance viewing */
+
+:root {
+  /* Color palette - brewery inspired */
+  --bg-primary: #1a140d;
+  --bg-secondary: #241b10;
+  --bg-card: #2d2215;
+  --bg-card-hover: #362a1a;
+
+  --text-primary: #f5ebe0;
+  --text-secondary: #d4c4b0;
+  --text-muted: #9a8a75;
+  --text-dark: #1a140d;
+
+  --accent-gold: #d4a843;
+  --accent-gold-light: #e8c56d;
+  --accent-gold-dark: #b89038;
+  --accent-amber: #cc7722;
+  --accent-amber-light: #e0994a;
+
+  --green-full: #2e7d32;
+  --green-full-light: #4caf50;
+  --amber-mid: #f57f17;
+  --amber-mid-light: #ffb300;
+  --red-low: #c62828;
+  --red-low-light: #ef5350;
+
+  --pour-active: #ff6b35;
+  --pour-pulse: rgba(255, 107, 53, 0.6);
+
+  --border-color: #3d2f1f;
+  --shadow-color: rgba(0, 0, 0, 0.5);
+
+  /* Responsive sizing using viewport units for TV scaling */
+  --font-size-base: clamp(16px, 2vw, 24px);
+  --font-size-lg: clamp(20px, 2.5vw, 32px);
+  --font-size-xl: clamp(28px, 3.5vw, 48px);
+  --font-size-xxl: clamp(40px, 5vw, 80px);
+  --font-size-title: clamp(32px, 4vw, 64px);
+
+  --card-padding: clamp(16px, 2vw, 32px);
+  --gap: clamp(16px, 2vw, 24px);
+  --border-radius: clamp(8px, 1vw, 16px);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: var(--font-size-base);
+  line-height: 1.4;
+  overflow-x: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(12px, 1.5vw, 24px) clamp(20px, 2.5vw, 40px);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-bottom: 2px solid var(--accent-gold);
+  position: relative;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg,
+    transparent 0%,
+    var(--accent-gold) 20%,
+    var(--accent-gold-light) 50%,
+    var(--accent-gold) 80%,
+    transparent 100%
+  );
+}
+
+.venue-name {
+  font-size: var(--font-size-title);
+  font-weight: 700;
+  color: var(--accent-gold);
+  text-shadow: 0 2px 4px var(--shadow-color);
+  letter-spacing: 0.05em;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+}
+
+.status-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  transition: background 0.3s ease;
+}
+
+.status-indicator.connected .status-dot {
+  background: var(--green-full-light);
+  box-shadow: 0 0 12px var(--green-full-light);
+}
+
+.status-indicator.disconnected .status-dot {
+  background: var(--red-low-light);
+  box-shadow: 0 0 12px var(--red-low-light);
+}
+
+.status-indicator.connecting .status-dot {
+  background: var(--amber-mid-light);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.9); }
+}
+
+/* Main Grid */
+.taps-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--gap);
+  padding: var(--gap);
+  max-width: 100%;
+}
+
+@media (max-width: 1200px) {
+  .taps-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 800px) {
+  .taps-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Tap Card */
+.tap-card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-color);
+  border-radius: var(--border-radius);
+  padding: var(--card-padding);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tap-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--accent-gold);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.tap-card:hover,
+.tap-card.pouring {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 20px rgba(212, 168, 67, 0.2);
+}
+
+.tap-card.pouring::before {
+  opacity: 1;
+}
+
+.tap-card.pouring {
+  animation: pourGlow 1s ease-in-out infinite alternate;
+}
+
+@keyframes pourGlow {
+  0% { box-shadow: 0 0 20px rgba(255, 107, 53, 0.2); }
+  100% { box-shadow: 0 0 30px rgba(255, 107, 53, 0.4), inset 0 0 30px rgba(255, 107, 53, 0.1); }
+}
+
+/* Tap Header */
+.tap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: clamp(12px, 1.5vw, 20px);
+  padding-bottom: clamp(8px, 1vw, 16px);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tap-number {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.tap-beer-info {
+  text-align: right;
+}
+
+.tap-beer-name {
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.tap-beer-style {
+  font-size: clamp(12px, 1.2vw, 16px);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Volume Display - Main Focus */
+.volume-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: clamp(16px, 2vw, 24px) 0;
+}
+
+.volume-label {
+  font-size: clamp(14px, 1.5vw, 20px);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  margin-bottom: 8px;
+}
+
+.volume-value {
+  font-size: var(--font-size-xxl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  text-shadow: 0 2px 8px var(--shadow-color);
+  line-height: 1;
+}
+
+.volume-unit {
+  font-size: clamp(18px, 2vw, 28px);
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-left: 4px;
+}
+
+/* Percentage Bar */
+.percentage-section {
+  margin: clamp(12px, 1.5vw, 20px) 0;
+}
+
+.percentage-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.percentage-label {
+  font-size: clamp(14px, 1.5vw, 20px);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+.percentage-value {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent-gold);
+}
+
+.progress-bar {
+  height: clamp(12px, 1.5vw, 20px);
+  background: var(--bg-primary);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease-out, background 0.3s ease;
+  background: var(--green-full);
+}
+
+.progress-fill.mid {
+  background: var(--amber-mid);
+}
+
+.progress-fill.low {
+  background: var(--red-low);
+}
+
+.progress-fill.critical {
+  background: var(--red-low);
+  animation: criticalPulse 1s ease-in-out infinite;
+}
+
+@keyframes criticalPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* Temperature & Pour Status */
+.stats-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: clamp(12px, 1.5vw, 20px);
+  border-top: 1px solid var(--border-color);
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: clamp(11px, 1.1vw, 14px);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.stat-value {
+  font-size: clamp(16px, 2vw, 24px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.stat-value.temp {
+  color: var(--accent-amber-light);
+}
+
+/* Pour Indicator */
+.pour-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: var(--bg-primary);
+  border: 2px solid var(--border-color);
+  transition: all 0.3s ease;
+}
+
+.pour-indicator.idle {
+  opacity: 0.4;
+}
+
+.pour-indicator.active {
+  background: rgba(255, 107, 53, 0.15);
+  border-color: var(--pour-active);
+  animation: pourPulse 0.8s ease-in-out infinite;
+}
+
+@keyframes pourPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 var(--pour-pulse);
+  }
+  50% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+.pour-icon {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text-muted);
+  transition: stroke 0.3s ease;
+}
+
+.pour-indicator.active .pour-icon {
+  stroke: var(--pour-active);
+}
+
+.pour-text {
+  font-size: clamp(12px, 1.3vw, 16px);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: color 0.3s ease;
+}
+
+.pour-indicator.active .pour-text {
+  color: var(--pour-active);
+}
+
+/* Last Pour */
+.last-pour {
+  margin-top: clamp(8px, 1vw, 12px);
+  padding-top: clamp(8px, 1vw, 12px);
+  border-top: 1px dashed var(--border-color);
+  font-size: clamp(12px, 1.3vw, 16px);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.last-pour-value {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(12px, 1.5vw, 24px) clamp(20px, 2.5vw, 40px);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  font-size: clamp(12px, 1.2vw, 16px);
+  color: var(--text-muted);
+}
+
+.last-updated {
+  font-variant-numeric: tabular-nums;
+}
+
+.version {
+  opacity: 0.6;
+}
+
+/* Loading State */
+.tap-card.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.tap-card.loading .volume-value,
+.tap-card.loading .percentage-value,
+.tap-card.loading .stat-value {
+  color: var(--text-muted);
+}
+
+/* No Data State */
+.tap-card.no-data .volume-value {
+  color: var(--text-muted);
+}
+
+.tap-card.no-data .progress-fill {
+  width: 0%;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .tap-card.pouring {
+    animation: none;
+  }
+  .pour-indicator.active {
+    animation: none;
+  }
+  .progress-fill.critical {
+    animation: none;
+  }
+}
+
+/* Print styles - hide for print */
+@media print {
+  .header, .footer, .pour-indicator {
+    display: none;
+  }
+  .taps-grid {
+    gap: 16px;
+    padding: 16px;
+  }
+  .tap-card {
+    break-inside: avoid;
+    border: 1px solid #ccc;
+    background: white;
+    color: black;
+  }
+  .tap-number, .tap-beer-name, .volume-value, .percentage-value {
+    color: black !important;
+  }
+  .progress-fill { background: #4caf50 !important; }
+  .progress-fill.mid { background: #ffb300 !important; }
+  .progress-fill.low { background: #ef5350 !important; }
+}

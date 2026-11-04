@@ -1,0 +1,17 @@
+{
+  "name": "brewery-tap-display",
+  "version": "1.0.0",
+  "description": "Real-time tap display for Plaato keg scales using open-plaato-keg",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "ws": "^8.17.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
