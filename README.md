@@ -27,7 +27,6 @@ A complete Docker-based setup for displaying real-time keg levels from Plaato Ke
 
 ```bash
 # 1. Clone/navigate to project
-cd /home/koppaarch/koding/bar_display
 
 # 2. Run startup script (creates data dir, starts containers)
 ./start.sh
