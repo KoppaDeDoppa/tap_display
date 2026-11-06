@@ -28,7 +28,7 @@ services:
     container_name: brewery-tap-display
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "8080:3000"
     environment:
       - PLAATO_SERVER=http://open_plaato_keg:8085
       - SERVER_PORT=3000
