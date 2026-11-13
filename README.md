@@ -13,7 +13,7 @@ A complete Docker-based setup for displaying real-time keg levels from Plaato Ke
                                                        ▼
                                               ┌──────────────────────┐
                                               │  brewery-tap-display │
-                                              │  (Docker, port 3000) │
+                                              │  (Docker, port 3005) │
                                               └──────────┬───────────┘
                                                          │ Serves frontend
                                                          ▼
@@ -49,7 +49,7 @@ docker compose restart tap_display
 
 This starts two containers:
 - **open-plaato-keg** (port 8085) - bridges Plaato hardware to HTTP/WebSocket API
-- **tap_display** (port 3000) - your web dashboard, proxies Plaato API
+- **tap_display** (port 3005) - your web dashboard, proxies Plaato API
 
 ### 2. Configure Plaato Keg Scale(s)
 
@@ -93,7 +93,7 @@ Edit `config.json` with your actual auth tokens:
       "beerStyle": "Stout"
     }
   ],
-  "serverPort": 3000
+  "serverPort": 3005
 }
 ```
 
@@ -107,13 +107,13 @@ docker compose restart tap_display
 
 ### 5. View Your Dashboard
 
-Open **http://localhost:3000** — you'll see real-time keg levels, temperature, pour detection, and more!
+Open **http://localhost:3005** — you'll see real-time keg levels, temperature, pour detection, and more!
 
 ## Access Points
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Tap Display** | http://localhost:3000 | Your public-facing dashboard |
+| **Tap Display** | http://localhost:3005 | Your public-facing dashboard |
 | **Plaato Web UI** | http://localhost:8085 | Device config, calibration, beverage library |
 | **Plaato API (kegs)** | http://localhost:8085/api/kegs | REST endpoint for keg data |
 | **Plaato WebSocket** | ws://localhost:8085/ws | Real-time updates |
@@ -167,7 +167,7 @@ docker compose up -d
 
 - **Plaato device** → **open-plaato-keg**: Port 1234 (TCP, Blynk protocol)
 - **tap_display** → **open-plaato-keg**: Port 8085 (HTTP + WebSocket)
-- **Browser** → **tap_display**: Port 3000 (HTTP)
+- **Browser** → **tap_display**: Port 3005 (HTTP)
 
 All services must be on the same LAN. For remote access, use a reverse proxy (nginx, Traefik, Caddy) with HTTPS.
 
@@ -193,7 +193,7 @@ All services must be on the same LAN. For remote access, use a reverse proxy (ng
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `PLAATO_SERVER` | http://open_plaato_keg:8085 | Plaato API endpoint |
-| `SERVER_PORT` | 3000 | HTTP port for dashboard |
+| `SERVER_PORT` | 3005 | HTTP port for dashboard |
 | `NODE_ENV` | production | Node environment |
 
 ## Hardware Notes

@@ -43,7 +43,7 @@ if docker compose ps | grep -q "Up"; then
     echo "✅ Services started successfully!"
     echo ""
     echo "📍 Access Points:"
-    echo "   • Tap Display (your website):     http://localhost:3000"
+    echo "   • Tap Display (your website):     http://localhost:3005"
     echo "   • Plaato Web UI / API:            http://localhost:8085"
     echo "   • Plaato REST API (kegs):         http://localhost:8085/api/kegs"
     echo "   • Plaato WebSocket:               ws://localhost:8085/ws"

@@ -37,7 +37,7 @@ RUN chown -R node:node /app
 
 USER node
 
-EXPOSE 3000
+EXPOSE 3005
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
