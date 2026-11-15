@@ -386,13 +386,54 @@ body {
 .tap-card.no-data .volume-value { color: var(--text-muted); }
 .tap-card.no-data .progress-fill { width: 0%; }
 
-@media (max-width: 1200px) {
+/* TVs can report a smaller CSS viewport than their panel resolution.
+   Keep all three taps together rather than wrapping the third below the screen. */
+@media (min-width: 801px) and (max-width: 1200px) {
   :root {
-    --font-size-xxl: clamp(70px, 8vw, 118px);
-    --card-padding: clamp(22px, 2.4vw, 34px);
+    --font-size-xxl: clamp(64px, 7.4vw, 89px);
+    --font-size-lg: clamp(21px, 2vw, 24px);
+    --card-padding: 20px;
+    --gap: 16px;
   }
-  .taps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .tap-card { min-height: 520px; }
+  .taps-grid { padding: 24px; }
+  .tap-header { flex-direction: column; gap: 8px; }
+  .tap-beer-info { text-align: left; }
+  .stats-row { gap: 8px; }
+  .pour-indicator { gap: 6px; padding: 8px; }
+}
+
+@media (min-width: 801px) and (max-height: 800px) {
+  .header { min-height: 72px; padding-block: 12px; }
+  .taps-grid { padding-block: 20px; }
+  .tap-card { min-height: 0; padding-block: 20px; }
+  .tap-header { padding-bottom: 14px; }
+  .volume-section { min-height: 100px; margin-block: 14px; }
+  .percentage-section { margin-bottom: 16px; }
+  .stats-row { padding-top: 14px; }
+  .last-pour { margin-top: 12px; padding-top: 10px; }
+  .footer { padding-block: 10px; }
+}
+
+/* Compact landscape browsers (including zoomed TV browsers) still need
+   the complete cards and footer visible without scrolling. */
+@media (min-width: 801px) and (max-height: 650px) {
+  .header { min-height: 64px; padding-block: 8px; }
+  .taps-grid { padding-block: 12px; }
+  .tap-card { padding: 14px; }
+  .tap-header { flex-direction: row; gap: 8px; padding-bottom: 10px; }
+  .tap-beer-info { text-align: right; }
+  .tap-beer-name { font-size: 20px; }
+  .tap-number { font-size: 17px; }
+  .volume-section { margin-block: 8px; }
+  .volume-label { font-size: 16px; }
+  .volume-value { font-size: 64px; }
+  .volume-unit { font-size: 18px; }
+  .percentage-value { font-size: 24px; }
+  .percentage-section { margin-bottom: 12px; }
+  .stats-row { padding-top: 10px; }
+  .stat-value { font-size: 18px; }
+  .last-pour { margin-top: 8px; padding-top: 8px; }
+  .footer { padding-block: 6px; }
 }
 
 @media (max-width: 800px) {
