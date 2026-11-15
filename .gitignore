@@ -1,0 +1,4 @@
+# Local server-to-server credentials must never be committed.
+.env
+.env.*
+!.env.example

@@ -5,9 +5,10 @@
 
 const express = require('express');
 const http = require('http');
-const { WebSocketServer } = require('ws');
+const { WebSocket, WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
+const { createPaymentDisplay } = require('./payment-display');
 
 // Load configuration
 const configPath = path.join(__dirname, 'config.json');
@@ -29,6 +30,9 @@ const plaatoWsUrl = plaatoBaseUrl.replace(/^http/, 'ws') + '/ws';
 
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
+
+const paymentDisplay = createPaymentDisplay({ broadcast: broadcastToFrontend });
+app.use('/api', paymentDisplay.router);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -184,6 +188,8 @@ wss.on('connection', (ws, req) => {
     }))
   }));
 
+  ws.send(JSON.stringify(paymentDisplay.snapshot()));
+
   ws.on('close', () => {
     console.log('Frontend client disconnected');
     frontendClients.delete(ws);
@@ -213,6 +219,7 @@ server.listen(serverPort, () => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('\nShutting down...');
+  paymentDisplay.close();
   if (plaatoWsReconnectTimer) {
     clearTimeout(plaatoWsReconnectTimer);
   }
@@ -230,6 +237,7 @@ process.on('SIGINT', () => {
 
 process.on('SIGTERM', () => {
   console.log('\nShutting down...');
+  paymentDisplay.close();
   if (plaatoWsReconnectTimer) {
     clearTimeout(plaatoWsReconnectTimer);
   }

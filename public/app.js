@@ -177,6 +177,10 @@ function scheduleReconnect() {
 
 // Handle incoming WebSocket messages
 function handleWebSocketMessage(message) {
+  if (message?.type === 'payment-display') {
+    window.paymentOverlay.handle(message);
+    return;
+  }
   // Messages can be:
   // 1. Config message (sent on connect)
   // 2. Keg data array (from /api/kegs)

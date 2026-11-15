@@ -1,0 +1,12 @@
+# Optional: share a private server-to-server network with BodenBar.
+services:
+  tap_display:
+    networks:
+      default: {}
+      payment-display:
+        aliases:
+          - tap-display
+networks:
+  payment-display:
+    external: true
+    name: bodenbar-display

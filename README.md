@@ -196,6 +196,38 @@ All services must be on the same LAN. For remote access, use a reverse proxy (ng
 | `SERVER_PORT` | 3005 | HTTP port for dashboard |
 | `NODE_ENV` | production | Node environment |
 
+## Vipps QR on the TV (optional BodenBar integration)
+
+BodenBar can send the selected customer's outstanding amount to the TV. The TV shows your **existing Vipps QR image and amount for 30 seconds**, then returns to the taps. Tap data continues updating underneath. No customer name or customer ID is sent to the TV, and this never marks a tab as paid.
+
+1. Put your own verified merchant/account QR image at `public/images/vipps-qr.png` (PNG or JPEG content, maximum 5 MB). Create the `public/images` folder if necessary. Keep the original image uncropped, including its white quiet zone. **Do not use a made-up QR or an unrelated payment link.** Requests fail with a setup error until the image exists. Outside Docker, `VIPPS_QR_IMAGE_PATH` can select another local file.
+2. Set `PAYMENT_DISPLAY_SECRET` in a local `.env` on **both** servers to the same randomly generated value, at least 32 characters. Generate one with `openssl rand -hex 32`. Never put it in `config.json`, browser code, URLs or Git. Set BodenBar's `TAP_DISPLAY_URL` to the TV origin (see below). The feature stays disabled if configuration is missing.
+3. On the same Pi, the recommended connection is an opt-in shared Docker network. Create it once:
+
+```bash
+docker network create bodenbar-display
+```
+
+Start Tap Display with its optional network override (the existing Plaato network is retained):
+
+```bash
+docker compose -f docker-compose.yml -f compose.payment-display.yaml up -d --build
+```
+
+In BodenBar, set `TAP_DISPLAY_URL=http://tap-display:3005` and use its matching `compose.payment-display.yaml` override. See BodenBar's `DOCKER.md` for its startup command. Continue using these override files for later updates. Rebuild Tap Display after replacing the bundled QR image.
+
+Alternatively, the POS can use `TAP_DISPLAY_URL=http://10.0.0.33:3005` over your trusted private LAN if Docker can reach the Pi's published port. No shared-network override is needed in that case. `localhost` inside the POS container is **not** the TV container. Use encrypted transport if crossing an untrusted network. Tailscale remote browser access remains `http://100.101.106.50:3005`; Plaato scales still connect to `10.0.0.33:1234`.
+
+**Privacy and payment limits:** the existing TV HTTP/WebSocket interface is not login-protected. All reachable TV browsers can receive the displayed amount, so restrict port 3005 to trusted LAN/Tailscale devices using firewall and Tailscale ACLs; do not publish it to the internet. The server secret protects sending new displays, not viewing the screen. The amount is a snapshot at button press, not a payment request that tracks future purchases. Scanning the static QR may require **manual amount entry in Vipps**. Verify the recipient and scan behavior from the physical TV before use, and confirm payment manually in BodenBar. A success message only confirms the TV server accepted the request, not that a physical screen rendered it or payment was received.
+
+### Development checks
+
+```bash
+npm test
+```
+
+The test suite uses disposable image fixtures and fake clocks; no real payment QR or customer data is required.
+
 ## Hardware Notes
 
 - **Plaato Keg** — Scale-based, measures weight, temperature, pour detection

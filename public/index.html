@@ -24,6 +24,18 @@
     <div class="version">Tap Display v1.0</div>
   </footer>
 
+  <section id="paymentOverlay" class="payment-overlay" role="status" aria-live="polite" aria-label="Vipps-betaling" hidden>
+    <div class="payment-layout">
+      <div class="payment-qr-frame"><img id="paymentQr" alt="Skann Vipps QR-koden" width="600" height="600"></div>
+      <div class="payment-copy">
+        <h2>Betal med Vipps</h2>
+        <p id="paymentAmount" class="payment-amount"></p>
+        <p>Skriv inn beløpet i Vipps.</p>
+        <p class="payment-countdown">Tilbake til tappene om <span id="paymentSeconds">30</span> sekunder</p>
+      </div>
+    </div>
+  </section>
+  <script src="payment.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

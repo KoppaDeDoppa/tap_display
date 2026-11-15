@@ -33,6 +33,8 @@ services:
       - PLAATO_SERVER=http://open_plaato_keg:8085
       - SERVER_PORT=3005
       - NODE_ENV=production
+      # Optional BodenBar payment display (same secret on both servers, >=32 characters).
+      - PAYMENT_DISPLAY_SECRET=${PAYMENT_DISPLAY_SECRET:-}
     volumes:
       # Mount config.json for easy editing without rebuilding
       - ./config.json:/app/config.json:ro
