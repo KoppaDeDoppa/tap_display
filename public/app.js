@@ -51,7 +51,8 @@ function renderTapCards() {
   tapsGrid.innerHTML = '';
 
   tapsConfig.forEach((tap, index) => {
-    const card = createTapCard(tap, index);
+    // Reattach existing cards so their latest data survives the leaderboard view.
+    const card = tapElements[tap.id] || createTapCard(tap, index);
     tapsGrid.appendChild(card);
     tapElements[tap.id] = card;
   });
@@ -269,44 +270,101 @@ function renderLeaderboard() {
   tapsGrid.innerHTML = '';
   const periodLabel = leaderboardData?.period ? `Måned: ${leaderboardData.period}` : '';
 
+  // Merge byDrinks and bySpent by name to get both values per person
+  const byDrinks = leaderboardData?.byDrinks || [];
+  const bySpent = leaderboardData?.bySpent || [];
+  const nameToDrinks = new Map(byDrinks.map(d => [d.name, d.value]));
+  const nameToSpent = new Map(bySpent.map(s => [s.name, s.value]));
+  const allNames = new Set([...nameToDrinks.keys(), ...nameToSpent.keys()]);
+
+  // Create combined entries, sort by drinks desc then spent desc
+  const combined = Array.from(allNames).map(name => ({
+    name,
+    drinks: nameToDrinks.get(name) || 0,
+    spent: nameToSpent.get(name) || 0
+  })).sort((a, b) => b.drinks - a.drinks || b.spent - a.spent);
+
+  // Take top 22
+  const top22 = combined.slice(0, 22);
+  const top3 = top22.slice(0, 3);
+  const rest = top22.slice(3);
+
   const container = document.createElement('div');
   container.className = 'leaderboard-container';
   container.style.gridColumn = '1 / -1';
   container.innerHTML = `
     <header class="leaderboard-header">
-      <h2>🏆 Leaderboard</h2>
+      <h2>Leaderboard</h2>
       <p class="leaderboard-period">${escapeHtml(periodLabel)}</p>
     </header>
-    <section class="leaderboard-section">
-      <h3>🍺 Flest drikker</h3>
-      <ol class="leaderboard-list" id="drinksList"></ol>
-    </section>
-    <section class="leaderboard-section">
-      <h3>💰 Mest brukt</h3>
-      <ol class="leaderboard-list" id="spentList"></ol>
-    </section>
+    <section class="leaderboard-top3" id="top3Section"></section>
+    <section class="leaderboard-rest" id="restSection"></section>
   `;
   tapsGrid.appendChild(container);
 
-  const drinksList = container.querySelector('#drinksList');
-  const spentList = container.querySelector('#spentList');
+  const top3Section = container.querySelector('#top3Section');
+  const restSection = container.querySelector('#restSection');
 
-  (leaderboardData?.byDrinks || []).forEach(entry => {
-    const li = document.createElement('li');
-    li.innerHTML = `<span class="leaderboard-rank">${entry.rank}.</span> <span class="leaderboard-name">${escapeHtml(entry.name)}</span> <span class="leaderboard-value">${entry.value} drikker</span>`;
-    drinksList.appendChild(li);
-  });
-  if (!drinksList.children.length) {
-    drinksList.innerHTML = '<li class="leaderboard-empty">Ingen data ennå</li>';
-  }
+  // Find max values for bar scaling
+  const maxDrinks = Math.max(...top22.map(p => p.drinks), 1);
+  const maxSpent = Math.max(...top22.map(p => p.spent), 1);
 
-  (leaderboardData?.bySpent || []).forEach(entry => {
-    const li = document.createElement('li');
-    li.innerHTML = `<span class="leaderboard-rank">${entry.rank}.</span> <span class="leaderboard-name">${escapeHtml(entry.name)}</span> <span class="leaderboard-value">${entry.value} kr</span>`;
-    spentList.appendChild(li);
+  // Render top 3 in order: #1, #2, #3 (with rank classes for staggering: #2 left, #1 middle higher, #3 right)
+  const top3Order = [0, 1, 2]; // indices: 0=#1, 1=#2, 2=#3
+  const rankLabels = [`#1 Plass`, `#2 Plass`, `#3 Plass`];
+  const rankClasses = ['rank-2', 'rank-1', 'rank-3']; // #1 gets rank-1 (highest), #2 gets rank-2 (left), #3 gets rank-3 (right)
+
+  top3Order.forEach((originalIndex, displayIndex) => {
+    const person = top3[originalIndex];
+    if (!person) return;
+    const rank = originalIndex + 1;
+    const rankLabel = rankLabels[originalIndex];
+    const rankClass = rankClasses[displayIndex];
+
+    const card = document.createElement('div');
+    card.className = `leaderboard-top3-card ${rankClass}`;
+    card.innerHTML = `
+      <div class="top3-rank">${escapeHtml(rankLabel)}</div>
+      <div class="top3-name">${escapeHtml(person.name)}</div>
+      <div class="top3-stats">
+        <div class="top3-stat-row">
+          <span class="top3-stat-value">${person.drinks} enheter</span>
+        </div>
+        <div class="top3-stat-row">
+          <span class="top3-stat-value">${person.spent} kr</span>
+        </div>
+      </div>
+    `;
+    top3Section.appendChild(card);
   });
-  if (!spentList.children.length) {
-    spentList.innerHTML = '<li class="leaderboard-empty">Ingen data ennå</li>';
+
+  // Render rest (4-22) in columns of 4
+  if (rest.length > 0) {
+    const grid = document.createElement('div');
+    grid.className = 'leaderboard-rest-grid';
+
+    // Split rest into chunks of 4
+    const columns = [];
+    for (let i = 0; i < rest.length; i += 4) {
+      columns.push(rest.slice(i, i + 4));
+    }
+
+    columns.forEach((column, colIndex) => {
+      const colDiv = document.createElement('div');
+      colDiv.className = 'leaderboard-rest-column';
+      const list = document.createElement('ol');
+      column.forEach((person, index) => {
+        const rank = colIndex * 4 + index + 4;
+        const li = document.createElement('li');
+        li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter, (${person.spent})kr</span>`;
+        list.appendChild(li);
+      });
+      colDiv.appendChild(list);
+      grid.appendChild(colDiv);
+    });
+    restSection.appendChild(grid);
+  } else if (top3.length === 0) {
+    top3Section.innerHTML = '<p class="leaderboard-empty">Ingen data ennå</p>';
   }
 }
 
@@ -491,5 +549,10 @@ setInterval(() => {
 window.tapDisplay = {
   tapsConfig,
   tapElements,
-  ws
+  ws,
+  get viewMode() { return viewMode; },
+  set viewMode(v) { viewMode = v; if (v === 'leaderboard') renderLeaderboard(); else renderTapCards(); },
+  renderLeaderboard,
+  renderTapCards,
+  leaderboardData
 };

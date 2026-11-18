@@ -131,8 +131,8 @@ function createLeaderboardPoller({ origin = '', secret = '', fetchImpl = fetch, 
 function validateLeaderboard(data) {
   if (!data || !Array.isArray(data.byDrinks) || !Array.isArray(data.bySpent) || typeof data.period !== 'string') return null;
   return {
-    byDrinks: data.byDrinks.slice(0, 5).map((e, i) => ({ rank: i + 1, name: String(e.name || ''), value: Number(e.value) || 0 })),
-    bySpent: data.bySpent.slice(0, 5).map((e, i) => ({ rank: i + 1, name: String(e.name || ''), value: Number(e.value) || 0 })),
+    byDrinks: data.byDrinks.map((e, i) => ({ rank: i + 1, name: String(e.name || ''), value: Number(e.value) || 0 })),
+    bySpent: data.bySpent.map((e, i) => ({ rank: i + 1, name: String(e.name || ''), value: Number(e.value) || 0 })),
     period: String(data.period)
   };
 }

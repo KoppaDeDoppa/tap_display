@@ -15,6 +15,33 @@ function browser() {
   return { context, rendered, payments, resolve(data) { resolveFetch({ ok: true, json: async () => data }); },
     send(data) { context.handleWebSocketMessage(data); } };
 }
+test('keg cards retain data and hidden updates when returning from leaderboard', () => {
+  const b = browser();
+  const grid = { children: [], appendChild(card) { this.children.push(card); },
+    set innerHTML(value) { this.children = []; } };
+  b.context.grid = grid;
+  vm.runInContext(`
+    tapsConfig = [{ id: 'scale' }];
+    tapsGrid.appendChild = card => grid.appendChild(card);
+    Object.defineProperty(tapsGrid, 'innerHTML', { set: value => { grid.innerHTML = value; } });
+    createTapCard = () => ({ volume: '--.-' });
+    updateTap = keg => { tapElements[keg.id].volume = keg.amount_left; };
+  `, b.context);
+  b.context.renderTapCards();
+  const originalCard = grid.children[0];
+  b.send({ id: 'scale', amount_left: 22.5 });
+  assert.equal(originalCard.volume, 22.5);
+  vm.runInContext("tapsGrid.innerHTML = 'leaderboard';", b.context);
+  b.send({ id: 'scale', amount_left: 21 });
+  b.context.renderTapCards();
+  assert.equal(grid.children.length, 1);
+  assert.equal(grid.children[0], originalCard);
+  assert.equal(grid.children[0].volume, 21);
+  b.context.renderTapCards();
+  assert.equal(grid.children[0], originalCard);
+  assert.equal(grid.children[0].volume, 21);
+});
+
 const snapshot = (generation, seq, amount) => ({ type: 'kegs', generation, seq, kegs: [{ id: 'helles-lager', amount_left: amount }] });
 test('delayed REST cannot overwrite websocket snapshot, even across process generation changes', async () => {
   const b = browser();
