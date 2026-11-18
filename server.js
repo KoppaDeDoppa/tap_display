@@ -5,7 +5,7 @@ const { WebSocket, WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { createPaymentDisplay } = require('./payment-display');
-const { createEstimatedPoller, createKegStore } = require('./estimated-keg');
+const { createEstimatedPoller, createLeaderboardPoller, validateLeaderboard, createKegStore } = require('./estimated-keg');
 
 function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')),
   env = process.env, fetchImpl = fetch } = {}) {
@@ -25,6 +25,8 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
   }
   const estimated = createEstimatedPoller({ origin: env.POS_SERVER_URL || '', secret: env.KEG_TRACKING_SECRET || '',
     fetchImpl, onChange: kegs => broadcastToFrontend(store.estimated(kegs)) });
+  const leaderboard = createLeaderboardPoller({ origin: env.POS_SERVER_URL || '', secret: env.KEG_TRACKING_SECRET || '',
+    fetchImpl, onChange: data => broadcastToFrontend({ type: 'leaderboard', ...validateLeaderboard(data) }) });
   const paymentDisplay = createPaymentDisplay({ secret: env.PAYMENT_DISPLAY_SECRET || '',
     imagePath: env.VIPPS_QR_IMAGE_PATH, broadcast: broadcastToFrontend });
   app.use(express.static(path.join(__dirname, 'public')));
@@ -99,11 +101,12 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
     if (started) return;
     started = true;
     estimated.start();
+    leaderboard.start();
     connectToPlaatoWs();
     server.listen(Number(env.SERVER_PORT || config.serverPort));
   }
   function close() {
-    stopped = true; estimated.close(); paymentDisplay.close(); clearTimeout(reconnectTimer);
+    stopped = true; estimated.close(); leaderboard.close(); paymentDisplay.close(); clearTimeout(reconnectTimer);
     plaatoWs?.terminate();
     for (const client of frontendClients) client.terminate();
     wss.close();

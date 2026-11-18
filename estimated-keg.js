@@ -95,4 +95,46 @@ function createKegStore(taps, generation = randomUUID()) {
     estimated(data) { estimated = new Map(data.filter(keg => virtualIds.has(keg.id)).map(keg => [keg.id, keg])); seq++; return snapshot(); },
   };
 }
-module.exports = { validateConnection, validateSnapshot, createEstimatedPoller, createKegStore };
+function createLeaderboardPoller({ origin = '', secret = '', fetchImpl = fetch, now = Date.now,
+    schedule = setTimeout, cancel = clearTimeout, interval = 60000, timeout = 4000,
+    onChange = () => {} } = {}) {
+  const base = validateConnection(origin, secret);
+  let data = null, stopped = false, running = false, nextTimer, controller;
+  function poll() {
+    if (stopped || running || !base) return;
+    running = true;
+    controller = new AbortController();
+    let rejectTimeout;
+    const expired = new Promise((_, reject) => { rejectTimeout = reject; });
+    const timeoutTimer = schedule(() => {
+      controller.abort(); rejectTimeout(new Error('Leaderboard request timed out'));
+    }, timeout);
+    timeoutTimer?.unref?.();
+    (async () => {
+      try {
+        const response = await fetchImpl(`${base}/api/integrations/leaderboard`, {
+          headers: { Authorization: `Bearer ${secret}` }, redirect: 'error', signal: controller.signal,
+        });
+        if (!response.ok) throw new Error('Leaderboard request failed');
+        const result = await response.json();
+        if (!stopped) { data = result; onChange(data); }
+      } catch { /* Retain last data */ }
+      finally {
+        cancel(timeoutTimer); running = false;
+        if (!stopped) { nextTimer = schedule(poll, interval); nextTimer?.unref?.(); }
+      }
+    })();
+  }
+  return { snapshot() { return data; }, start() { if (!running && base) poll(); }, close() { stopped = true; cancel(nextTimer); controller?.abort(); } };
+}
+
+function validateLeaderboard(data) {
+  if (!data || !Array.isArray(data.byDrinks) || !Array.isArray(data.bySpent) || typeof data.period !== 'string') return null;
+  return {
+    byDrinks: data.byDrinks.slice(0, 5).map((e, i) => ({ rank: i + 1, name: String(e.name || ''), value: Number(e.value) || 0 })),
+    bySpent: data.bySpent.slice(0, 5).map((e, i) => ({ rank: i + 1, name: String(e.name || ''), value: Number(e.value) || 0 })),
+    period: String(data.period)
+  };
+}
+
+module.exports = { validateConnection, validateSnapshot, createEstimatedPoller, createLeaderboardPoller, validateLeaderboard, createKegStore };

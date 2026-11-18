@@ -12,6 +12,9 @@ let lastUpdateTime = null;
 let snapshotGeneration = null;
 let snapshotSequence = -1;
 let websocketSnapshotVersion = 0;
+let viewMode = 'kegs'; // 'kegs' or 'leaderboard'
+let leaderboardData = null;
+let viewCycleTimer = null;
 
 // DOM Elements
 const tapsGrid = document.getElementById('tapsGrid');
@@ -25,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderTapCards();
   connectWebSocket();
   fetchInitialData();
+  startViewCycle();
 });
 
 // Load tap configuration from server
@@ -217,6 +221,11 @@ function handleWebSocketMessage(message) {
     window.paymentOverlay.handle(message);
     return;
   }
+  if (message?.type === 'leaderboard') {
+    leaderboardData = { byDrinks: message.byDrinks || [], bySpent: message.bySpent || [], period: message.period || '' };
+    if (viewMode === 'leaderboard') renderLeaderboard();
+    return;
+  }
   if (acceptSnapshot(message, true)) return;
   // Messages can be:
   // 1. Config message (sent on connect)
@@ -239,6 +248,65 @@ function handleWebSocketMessage(message) {
   if (message && message.id) {
     websocketSnapshotVersion++;
     updateTap(message);
+  }
+}
+
+// View cycling between kegs and leaderboard
+function startViewCycle() {
+  if (viewCycleTimer) clearInterval(viewCycleTimer);
+  viewCycleTimer = setInterval(() => {
+    if (viewMode === 'kegs') {
+      viewMode = 'leaderboard';
+      renderLeaderboard();
+    } else {
+      viewMode = 'kegs';
+      renderTapCards();
+    }
+  }, 60000);
+}
+
+function renderLeaderboard() {
+  tapsGrid.innerHTML = '';
+  const periodLabel = leaderboardData?.period ? `Måned: ${leaderboardData.period}` : '';
+
+  const container = document.createElement('div');
+  container.className = 'leaderboard-container';
+  container.style.gridColumn = '1 / -1';
+  container.innerHTML = `
+    <header class="leaderboard-header">
+      <h2>🏆 Leaderboard</h2>
+      <p class="leaderboard-period">${escapeHtml(periodLabel)}</p>
+    </header>
+    <section class="leaderboard-section">
+      <h3>🍺 Flest drikker</h3>
+      <ol class="leaderboard-list" id="drinksList"></ol>
+    </section>
+    <section class="leaderboard-section">
+      <h3>💰 Mest brukt</h3>
+      <ol class="leaderboard-list" id="spentList"></ol>
+    </section>
+  `;
+  tapsGrid.appendChild(container);
+
+  const drinksList = container.querySelector('#drinksList');
+  const spentList = container.querySelector('#spentList');
+
+  (leaderboardData?.byDrinks || []).forEach(entry => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="leaderboard-rank">${entry.rank}.</span> <span class="leaderboard-name">${escapeHtml(entry.name)}</span> <span class="leaderboard-value">${entry.value} drikker</span>`;
+    drinksList.appendChild(li);
+  });
+  if (!drinksList.children.length) {
+    drinksList.innerHTML = '<li class="leaderboard-empty">Ingen data ennå</li>';
+  }
+
+  (leaderboardData?.bySpent || []).forEach(entry => {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="leaderboard-rank">${entry.rank}.</span> <span class="leaderboard-name">${escapeHtml(entry.name)}</span> <span class="leaderboard-value">${entry.value} kr</span>`;
+    spentList.appendChild(li);
+  });
+  if (!spentList.children.length) {
+    spentList.innerHTML = '<li class="leaderboard-empty">Ingen data ennå</li>';
   }
 }
 
