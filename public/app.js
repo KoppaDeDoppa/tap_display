@@ -9,6 +9,9 @@ let tapElements = {};
 let ws = null;
 let reconnectTimer = null;
 let lastUpdateTime = null;
+let snapshotGeneration = null;
+let snapshotSequence = -1;
+let websocketSnapshotVersion = 0;
 
 // DOM Elements
 const tapsGrid = document.getElementById('tapsGrid');
@@ -107,20 +110,37 @@ function createTapCard(tap, index) {
       Last pour: <span class="last-pour-value" data-field="lastPour">--</span>
     </div>
   `;
+  if (tap.source === 'estimated') {
+    card.classList.add('estimated');
+    card.querySelector('.volume-label').textContent = 'Estimated remaining';
+    card.querySelector('.stats-row').hidden = true;
+    card.querySelector('.last-pour').hidden = true;
+    const freshness = document.createElement('div');
+    freshness.className = 'estimate-status';
+    freshness.dataset.field = 'estimateStatus';
+    freshness.setAttribute('role', 'status');
+    freshness.textContent = 'Estimated · Unavailable';
+    card.appendChild(freshness);
+  }
   return card;
 }
 
 // Fetch initial keg data via REST
 async function fetchInitialData() {
+  const wsVersion = websocketSnapshotVersion;
   try {
-    const response = await fetch('/api/kegs');
+    const response = await fetch('/api/kegs?snapshot=1');
     if (!response.ok) throw new Error('Failed to fetch kegs');
     const kegs = await response.json();
     console.log('Initial keg data:', kegs);
-    updateAllTaps(kegs);
+    if (wsVersion === websocketSnapshotVersion) {
+      if (!acceptSnapshot(kegs, false)) {
+        if (Array.isArray(kegs) && snapshotGeneration === null) updateAllTaps(kegs);
+      }
+    }
   } catch (error) {
     console.error('Error fetching initial data:', error);
-    showConnectionError();
+    if (wsVersion === websocketSnapshotVersion && snapshotSequence < 0) showConnectionError();
   }
 }
 
@@ -175,12 +195,29 @@ function scheduleReconnect() {
   }, 5000);
 }
 
+// A process generation permits sequence resets on restart. REST may never undo a
+// snapshot received over WebSocket while its initial request was in flight.
+function acceptSnapshot(message, fromWebSocket) {
+  if (message?.type !== 'kegs' || typeof message.generation !== 'string' ||
+      !Number.isSafeInteger(message.seq) || !Array.isArray(message.kegs)) return false;
+  if (fromWebSocket) websocketSnapshotVersion++;
+  if (snapshotGeneration !== message.generation) {
+    snapshotGeneration = message.generation;
+    snapshotSequence = -1;
+  }
+  if (message.seq <= snapshotSequence) return true;
+  snapshotSequence = message.seq;
+  updateAllTaps(message.kegs);
+  return true;
+}
+
 // Handle incoming WebSocket messages
 function handleWebSocketMessage(message) {
   if (message?.type === 'payment-display') {
     window.paymentOverlay.handle(message);
     return;
   }
+  if (acceptSnapshot(message, true)) return;
   // Messages can be:
   // 1. Config message (sent on connect)
   // 2. Keg data array (from /api/kegs)
@@ -193,12 +230,14 @@ function handleWebSocketMessage(message) {
 
   // Handle array of kegs (initial load or full update)
   if (Array.isArray(message)) {
+    websocketSnapshotVersion++;
     updateAllTaps(message);
     return;
   }
 
   // Handle single keg update
   if (message && message.id) {
+    websocketSnapshotVersion++;
     updateTap(message);
   }
 }
@@ -230,6 +269,14 @@ function updateTap(keg) {
     return;
   }
 
+  if (keg.source === 'estimated') {
+    if (keg.available === false || !Number.isFinite(keg.amount_left)) {
+      setTapNoData(keg.id);
+      return;
+    }
+    card.classList.toggle('stale', !!keg.stale);
+    setField(card, 'estimateStatus', keg.stale ? 'Estimated · Stale (POS unavailable)' : 'Estimated · Sales-based');
+  }
   card.classList.remove('loading', 'no-data');
 
   // Volume remaining
@@ -254,6 +301,8 @@ function updateTap(keg) {
       progressFill.classList.add('mid');
     }
   }
+
+  if (keg.source === 'estimated') return;
 
   // Temperature
   const temp = parseFloat(keg.keg_temperature);
@@ -295,6 +344,8 @@ function setTapNoData(tapId) {
   if (!card) return;
   card.classList.remove('loading');
   card.classList.add('no-data');
+  card.classList.remove('stale', 'pouring');
+  setField(card, 'estimateStatus', 'Estimated · Unavailable');
   setField(card, 'volume', '--.-');
   setField(card, 'percentage', '--%');
   const progressFill = card.querySelector('[data-field="progress"]');

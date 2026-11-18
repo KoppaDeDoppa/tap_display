@@ -10,7 +10,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 # Copy source code
-COPY server.js payment-display.js ./
+COPY server.js payment-display.js estimated-keg.js ./
 COPY public/ ./public/
 
 # Production stage
@@ -26,7 +26,7 @@ RUN apk add --no-cache dumb-init
 
 # Copy built app from builder
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/server.js /app/payment-display.js ./
+COPY --from=builder /app/server.js /app/payment-display.js /app/estimated-keg.js ./
 COPY --from=builder /app/public ./public
 
 # Copy config (will be overridden by docker-compose volume mount)

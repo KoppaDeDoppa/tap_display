@@ -14,7 +14,8 @@
       "beerStyle": "Stout"
     },
     {
-      "id": "KEG_AUTH_TOKEN_3",
+      "id": "helles-lager",
+      "source": "estimated",
       "name": "Tap 3",
       "beerName": "Helles Lager",
       "beerStyle": "Lager"

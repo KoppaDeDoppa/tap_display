@@ -33,6 +33,9 @@ services:
       - PLAATO_SERVER=http://open_plaato_keg:8085
       - SERVER_PORT=3005
       - NODE_ENV=production
+      # POS origin reachable inside this container; shared with the POS server.
+      - POS_SERVER_URL=${POS_SERVER_URL:-}
+      - KEG_TRACKING_SECRET=${KEG_TRACKING_SECRET:-}
       # Optional BodenBar payment display (same secret on both servers, >=32 characters).
       - PAYMENT_DISPLAY_SECRET=${PAYMENT_DISPLAY_SECRET:-}
     volumes:

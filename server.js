@@ -1,254 +1,120 @@
-/**
- * Brewery Tap Display - Express + WebSocket Proxy Server
- * Proxies requests to open-plaato-keg server and serves the frontend
- */
-
+/** Display proxy with independent Plaato and POS estimated-keg sources. */
 const express = require('express');
 const http = require('http');
 const { WebSocket, WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
 const { createPaymentDisplay } = require('./payment-display');
+const { createEstimatedPoller, createKegStore } = require('./estimated-keg');
 
-// Load configuration
-const configPath = path.join(__dirname, 'config.json');
-const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-
-// Environment variables override config.json (for Docker)
-const plaatoServer = process.env.PLAATO_SERVER || config.plaatoServer;
-const serverPort = process.env.SERVER_PORT ? parseInt(process.env.SERVER_PORT, 10) : config.serverPort;
-const taps = config.taps;
-
-const app = express();
-const server = http.createServer(app);
-
-// Extract base URL for proxying
-const plaatoBaseUrl = plaatoServer.replace(/\/+$/, ''); // Remove trailing slash
-
-// Parse WebSocket URL from HTTP URL
-const plaatoWsUrl = plaatoBaseUrl.replace(/^http/, 'ws') + '/ws';
-
-// Serve static files from public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
-const paymentDisplay = createPaymentDisplay({ broadcast: broadcastToFrontend });
-app.use('/api', paymentDisplay.router);
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', server: 'tap-display', plaatoServer: plaatoBaseUrl });
-});
-
-// REST API Proxy: GET /api/kegs -> open-plaato-keg /api/kegs
-app.get('/api/kegs', async (req, res) => {
-  try {
-    const response = await fetch(`${plaatoBaseUrl}/api/kegs`);
-    if (!response.ok) {
-      throw new Error(`Plaato server responded with ${response.status}`);
-    }
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    console.error('Error proxying /api/kegs:', error.message);
-    res.status(502).json({ error: 'Failed to fetch kegs from Plaato server', details: error.message });
+function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8')),
+  env = process.env, fetchImpl = fetch } = {}) {
+  const taps = config.taps;
+  const plaatoBaseUrl = (env.PLAATO_SERVER || config.plaatoServer).replace(/\/+$/, '');
+  const app = express();
+  const server = http.createServer(app);
+  const wss = new WebSocketServer({ server, path: '/ws' });
+  const store = createKegStore(taps);
+  let plaatoWs, reconnectTimer, stopped = false, started = false;
+  let upstreamRevision = 0;
+  const frontendClients = new Set();
+  const publicTaps = taps.map(({ id, name, beerName, beerStyle, source }) => ({ id, name, beerName, beerStyle, source: source || 'plaato' }));
+  function broadcastToFrontend(message) {
+    const data = JSON.stringify(message);
+    for (const client of frontendClients) if (client.readyState === WebSocket.OPEN) client.send(data);
   }
-});
-
-// REST API Proxy: GET /api/kegs/:id -> open-plaato-keg /api/kegs/:id
-app.get('/api/kegs/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const response = await fetch(`${plaatoBaseUrl}/api/kegs/${id}`);
-    if (!response.ok) {
-      throw new Error(`Plaato server responded with ${response.status}`);
-    }
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    console.error(`Error proxying /api/kegs/${req.params.id}:`, error.message);
-    res.status(502).json({ error: 'Failed to fetch keg from Plaato server', details: error.message });
+  const estimated = createEstimatedPoller({ origin: env.POS_SERVER_URL || '', secret: env.KEG_TRACKING_SECRET || '',
+    fetchImpl, onChange: kegs => broadcastToFrontend(store.estimated(kegs)) });
+  const paymentDisplay = createPaymentDisplay({ secret: env.PAYMENT_DISPLAY_SECRET || '',
+    imagePath: env.VIPPS_QR_IMAGE_PATH, broadcast: broadcastToFrontend });
+  app.use(express.static(path.join(__dirname, 'public')));
+  app.use('/api', paymentDisplay.router);
+  app.get('/health', (_req, res) => res.json({ status: 'ok', server: 'tap-display', plaatoServer: plaatoBaseUrl }));
+  app.get('/api/config', (_req, res) => res.json({ taps: publicTaps }));
+  async function plaatoFetch(route) {
+    const response = await fetchImpl(`${plaatoBaseUrl}${route}`, { signal: AbortSignal.timeout(2000) });
+    if (!response.ok) throw new Error('Plaato request failed');
+    return response;
   }
-});
-
-// REST API Proxy: GET /api/kegs/connected -> open-plaato-keg /api/kegs/connected
-app.get('/api/kegs/connected', async (req, res) => {
-  try {
-    const response = await fetch(`${plaatoBaseUrl}/api/kegs/connected`);
-    if (!response.ok) {
-      throw new Error(`Plaato server responded with ${response.status}`);
-    }
-    const data = await response.json();
-    res.json(data);
-  } catch (error) {
-    console.error('Error proxying /api/kegs/connected:', error.message);
-    res.status(502).json({ error: 'Failed to fetch connected kegs', details: error.message });
-  }
-});
-
-// REST API Proxy: GET /api/metrics -> open-plaato-keg /api/metrics (Prometheus)
-app.get('/api/metrics', async (req, res) => {
-  try {
-    const response = await fetch(`${plaatoBaseUrl}/api/metrics`);
-    if (!response.ok) {
-      throw new Error(`Plaato server responded with ${response.status}`);
-    }
-    const data = await response.text();
-    res.set('Content-Type', 'text/plain');
-    res.send(data);
-  } catch (error) {
-    console.error('Error proxying /api/metrics:', error.message);
-    res.status(502).json({ error: 'Failed to fetch metrics', details: error.message });
-  }
-});
-
-// Config endpoint for frontend - returns tap configuration (without sensitive IDs in production)
-app.get('/api/config', (req, res) => {
-  // Return tap config for frontend (beer names, styles, etc.)
-  // We include the IDs so frontend can map WebSocket data to taps
-  res.json({
-    taps: taps.map(tap => ({
-      id: tap.id,
-      name: tap.name,
-      beerName: tap.beerName,
-      beerStyle: tap.beerStyle
-    }))
-  });
-});
-
-// WebSocket Proxy
-const wss = new WebSocketServer({ server, path: '/ws' });
-
-let plaatoWs = null;
-let plaatoWsReconnectTimer = null;
-const frontendClients = new Set();
-
-function connectToPlaatoWs() {
-  if (plaatoWs && plaatoWs.readyState === WebSocket.OPEN) {
-    return; // Already connected
-  }
-
-  console.log(`Connecting to Plaato WebSocket: ${plaatoWsUrl}`);
-  plaatoWs = new WebSocket(plaatoWsUrl);
-
-  plaatoWs.onopen = () => {
-    console.log('Connected to Plaato WebSocket');
-  };
-
-  plaatoWs.onmessage = (event) => {
+  async function refreshPlaato() {
+    const revision = upstreamRevision;
     try {
-      const message = JSON.parse(event.data.toString());
-      // Broadcast to all connected frontend clients
-      broadcastToFrontend(message);
-    } catch (error) {
-      console.error('Error parsing Plaato WebSocket message:', error.message);
-    }
-  };
-
-  plaatoWs.onerror = (error) => {
-    console.error('Plaato WebSocket error:', error.message);
-  };
-
-  plaatoWs.onclose = () => {
-    console.log('Plaato WebSocket disconnected, scheduling reconnect...');
-    plaatoWs = null;
-    scheduleReconnect();
-  };
-}
-
-function scheduleReconnect() {
-  if (plaatoWsReconnectTimer) {
-    clearTimeout(plaatoWsReconnectTimer);
+      const data = await (await plaatoFetch('/api/kegs')).json();
+      if (!Array.isArray(data)) throw new Error('Invalid Plaato snapshot');
+      // A slow HTTP result must not roll back a WebSocket update or newer REST refresh.
+      if (!stopped && revision === upstreamRevision) {
+        upstreamRevision++;
+        broadcastToFrontend(store.plaato(data));
+      }
+    } catch { /* POS and cached measured taps remain usable during a Plaato outage. */ }
+    return store.snapshot();
   }
-  plaatoWsReconnectTimer = setTimeout(() => {
+  app.get('/api/kegs', async (req, res) => {
+    const snapshot = await refreshPlaato();
+    res.set('Cache-Control', 'no-store').json(req.query.snapshot === '1' ? snapshot : snapshot.kegs);
+  });
+  // Register the named route before /:id. Connected uses the same merged snapshot.
+  app.get('/api/kegs/connected', async (req, res) => {
+    const snapshot = await refreshPlaato();
+    res.set('Cache-Control', 'no-store').json(req.query.snapshot === '1' ? snapshot : snapshot.kegs);
+  });
+  app.get('/api/kegs/:id', async (req, res) => {
+    if (!taps.some(tap => tap.id === req.params.id && tap.source === 'estimated')) await refreshPlaato();
+    const snapshot = store.snapshot();
+    const keg = snapshot.kegs.find(item => item.id === req.params.id);
+    res.set('Cache-Control', 'no-store');
+    if (!keg) return res.status(404).json({ error: 'Keg unavailable' });
+    res.json(req.query.snapshot === '1' ? { ...snapshot, kegs: [keg] } : keg);
+  });
+  app.get('/api/metrics', async (_req, res) => {
+    try { res.type('text/plain').send(await (await plaatoFetch('/api/metrics')).text()); }
+    catch { res.status(502).json({ error: 'Failed to fetch metrics' }); }
+  });
+  function connectToPlaatoWs() {
+    if (stopped) return;
+    plaatoWs = new WebSocket(plaatoBaseUrl.replace(/^http/, 'ws') + '/ws');
+    plaatoWs.on('message', data => {
+      try {
+        const message = JSON.parse(data.toString());
+        if (Array.isArray(message) || message?.id) {
+          upstreamRevision++;
+          broadcastToFrontend(store.plaato(message));
+        }
+      } catch { /* Ignore malformed upstream messages without exposing credentials. */ }
+    });
+    plaatoWs.on('error', () => {});
+    plaatoWs.on('close', () => {
+      if (!stopped) { reconnectTimer = setTimeout(connectToPlaatoWs, 5000); reconnectTimer.unref?.(); }
+    });
+  }
+  wss.on('connection', client => {
+    frontendClients.add(client);
+    client.send(JSON.stringify({ type: 'config', taps: publicTaps }));
+    client.send(JSON.stringify(store.snapshot()));
+    client.send(JSON.stringify(paymentDisplay.snapshot()));
+    client.on('close', () => frontendClients.delete(client));
+    client.on('error', () => frontendClients.delete(client));
+  });
+  function start() {
+    if (started) return;
+    started = true;
+    estimated.start();
     connectToPlaatoWs();
-  }, 5000); // Reconnect after 5 seconds
+    server.listen(Number(env.SERVER_PORT || config.serverPort));
+  }
+  function close() {
+    stopped = true; estimated.close(); paymentDisplay.close(); clearTimeout(reconnectTimer);
+    plaatoWs?.terminate();
+    for (const client of frontendClients) client.terminate();
+    wss.close();
+    server.close();
+  }
+  return { app, server, store, estimated, start, close, refreshPlaato };
 }
-
-function broadcastToFrontend(message) {
-  const data = JSON.stringify(message);
-  for (const client of frontendClients) {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(data);
-    }
-  }
+if (require.main === module) {
+  const display = createDisplayServer();
+  display.start();
+  process.once('SIGINT', () => display.close());
+  process.once('SIGTERM', () => display.close());
 }
-
-wss.on('connection', (ws, req) => {
-  console.log('Frontend client connected');
-  frontendClients.add(ws);
-
-  // Send initial config to frontend
-  ws.send(JSON.stringify({
-    type: 'config',
-    taps: taps.map(tap => ({
-      id: tap.id,
-      name: tap.name,
-      beerName: tap.beerName,
-      beerStyle: tap.beerStyle
-    }))
-  }));
-
-  ws.send(JSON.stringify(paymentDisplay.snapshot()));
-
-  ws.on('close', () => {
-    console.log('Frontend client disconnected');
-    frontendClients.delete(ws);
-  });
-
-  ws.on('error', (error) => {
-    console.error('Frontend WebSocket error:', error.message);
-    frontendClients.delete(ws);
-  });
-});
-
-// Start the initial connection to Plaato WebSocket
-connectToPlaatoWs();
-
-// Start HTTP server
-server.listen(serverPort, () => {
-  console.log(`\n🍺 Brewery Tap Display Server running on http://localhost:${serverPort}`);
-  console.log(`📡 Proxying to Plaato server: ${plaatoBaseUrl}`);
-  console.log(`🔌 WebSocket proxy: ws://localhost:${serverPort}/ws -> ${plaatoWsUrl}`);
-  console.log(`\nConfigured taps:`);
-  taps.forEach((tap, i) => {
-    console.log(`  ${i + 1}. ${tap.name} - ${tap.beerName} (${tap.beerStyle}) [ID: ${tap.id.substring(0, 8)}...]`);
-  });
-  console.log('\nPress Ctrl+C to stop\n');
-});
-
-// Graceful shutdown
-process.on('SIGINT', () => {
-  console.log('\nShutting down...');
-  paymentDisplay.close();
-  if (plaatoWsReconnectTimer) {
-    clearTimeout(plaatoWsReconnectTimer);
-  }
-  if (plaatoWs) {
-    plaatoWs.close();
-  }
-  for (const client of frontendClients) {
-    client.close();
-  }
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
-
-process.on('SIGTERM', () => {
-  console.log('\nShutting down...');
-  paymentDisplay.close();
-  if (plaatoWsReconnectTimer) {
-    clearTimeout(plaatoWsReconnectTimer);
-  }
-  if (plaatoWs) {
-    plaatoWs.close();
-  }
-  for (const client of frontendClients) {
-    client.close();
-  }
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
-  });
-});
+module.exports = { createDisplayServer };

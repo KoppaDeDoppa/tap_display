@@ -33,6 +33,12 @@
   .payment-copy .payment-countdown { margin-top: 12px; }
 }
 
+/* Virtual taps have no physical scale telemetry. */
+.tap-card.estimated .stats-row,
+.tap-card.estimated .last-pour { display: none; }
+.estimate-status { padding: 16px 0; color: var(--text-secondary); text-align: center; }
+.tap-card.stale .estimate-status { color: var(--text-primary); font-weight: 600; }
+
 /* Plaato keg display — BodenBar-inspired, tuned for a fixed TV screen. */
 :root {
   --bg-primary: #080b14;

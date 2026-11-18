@@ -196,6 +196,23 @@ All services must be on the same LAN. For remote access, use a reverse proxy (ng
 | `SERVER_PORT` | 3005 | HTTP port for dashboard |
 | `NODE_ENV` | production | Node environment |
 
+## Estimated Helles tap (BodenBar integration)
+
+Tap 3 is configured as `{"id":"helles-lager","source":"estimated"}`. Its stable ID is not a Plaato token or beer-name match. Taps 1 and 2 retain their existing placeholder IDs; replace those with your actual scale tokens. An omitted `source` defaults to `plaato`. No real IDs, capacity or current litres are guessed.
+
+Tracking remains opt-in on the POS: in its admin estimated-keg controls select the actual product IDs (including member/free equivalents), enable tracking, and enter capacity/current litres. Each selected registered serving consumes 0.5 L. Undo restores attributable servings; price-only corrections and payment do not change volume. New-keg reset isolates previous-keg undo/corrections. Manual calibration establishes a new accounting baseline. This is sales-based, not a measurement: spillage/unregistered pours require calibration.
+
+Set these server-side environment variables in the display's local `.env` (and recreate `tap_display` after changing them):
+
+- `POS_SERVER_URL`: origin-only HTTP(S) URL reachable **from the display container**, with no path, credentials, query or fragment. Use the POS service's actual network alias on the optional shared Docker network, or its private LAN address and published port. Container `localhost` is not the POS.
+- `KEG_TRACKING_SECRET`: same dedicated random value on POS and display, at least 32 printable non-space ASCII characters (`openssl rand -hex 32`). Keep it out of Git, `config.json`, frontend code and URLs. It is separate from `PAYMENT_DISPLAY_SECRET`. Both variables may be empty to leave polling disabled; partial/invalid configuration fails startup.
+
+The display polls `GET ${POS_SERVER_URL}/api/integrations/kegs` with `Authorization: Bearer <secret>`. Redirects are rejected. Requests time out after 2 seconds and the next poll is scheduled 2 seconds after completion, without overlap. No history is replayed and no volume is subtracted locally. POS responds with `{kegs: []}` when disabled, or a list of `{id, source: "estimated", amount_left, max_keg_volume, percent_of_beer_left, updatedAt}` (volumes in litres; ISO timestamp).
+
+Until configured, the virtual tap reads **Estimated · Unavailable**, not zero. Failed/invalid requests retain the last valid snapshot; 10 seconds after the last successful response it reads **Estimated · Stale (POS unavailable)**. Explicit disabled/empty snapshots immediately clear old data. Recovery is automatic. Temperature, pouring and last-pour measurements are hidden on the virtual tap. POS and Plaato failures do not block updates from the other source. Existing Vipps overlays are unchanged.
+
+Display REST `/api/kegs` and `/api/kegs/connected` retain their array response; `/api/kegs/:id` retains its single-object response. Add `?snapshot=1` (as the frontend does) for a complete merged snapshot envelope: `{type: "kegs", generation, seq, kegs: [...]}`; individual lookup has one keg in that envelope. WebSocket keg messages always use the complete envelope. The generation changes when the display process restarts; sequence increases on source updates. The frontend still accepts legacy Plaato arrays/single updates and payment/config messages. Versioned snapshots prevent a delayed initial REST response from replacing newer WebSocket data; reconnect immediately receives cached merged state. Configured virtual IDs are excluded from Plaato updates. An unavailable virtual keg has `available: false`, without fabricated volume; available estimates include `available: true` and `stale`.
+
 ## Vipps QR on the TV (optional BodenBar integration)
 
 BodenBar can send the selected customer's outstanding amount to the TV. The TV shows your **existing Vipps QR image and amount for 30 seconds**, then returns to the taps. Tap data continues updating underneath. No customer name or customer ID is sent to the TV, and this never marks a tab as paid.
