@@ -392,22 +392,6 @@ body {
 .tap-card.no-data .volume-value { color: var(--text-muted); }
 .tap-card.no-data .progress-fill { width: 0%; }
 
-/* TVs can report a smaller CSS viewport than their panel resolution.
-   Keep all three taps together rather than wrapping the third below the screen. */
-@media (min-width: 801px) and (max-width: 1200px) {
-  :root {
-    --font-size-xxl: clamp(64px, 7.4vw, 89px);
-    --font-size-lg: clamp(21px, 2vw, 24px);
-    --card-padding: 20px;
-    --gap: 16px;
-  }
-  .taps-grid { padding: 24px; }
-  .tap-header { flex-direction: column; gap: 8px; }
-  .tap-beer-info { text-align: left; }
-  .stats-row { gap: 8px; }
-  .pour-indicator { gap: 6px; padding: 8px; }
-}
-
 @media (min-width: 801px) and (max-height: 800px) {
   .header { min-height: 72px; padding-block: 12px; }
   .taps-grid { padding-block: 20px; }
@@ -614,62 +598,4 @@ body {
   color: var(--text-muted);
   padding: 32px;
   font-size: clamp(16px, 1vw, 20px);
-}
-
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  .leaderboard-top3 {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-  .leaderboard-top3-card {
-    flex-direction: row;
-    align-items: center;
-    min-height: auto;
-    gap: 24px;
-    transform: none !important;
-  }
-  .top3-rank {
-    margin-bottom: 0;
-    margin-top: 4px;
-    min-width: 100px;
-  }
-  .top3-name {
-    text-align: left;
-    margin-bottom: 0;
-    flex: 1;
-  }
-  .top3-stats {
-    flex: 2;
-    min-width: 0;
-  }
-}
-
-@media (max-width: 900px) {
-  .leaderboard-rest-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .leaderboard-rest-grid {
-    grid-template-columns: 1fr;
-  }
-  .leaderboard-rest-column li {
-    grid-template-columns: auto 1fr;
-    gap: 10px 8px;
-  }
-  .rest-stats {
-    grid-column: 1 / -1;
-    text-align: right;
-    margin-top: 4px;
-  }
-  .top3-stat-row {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  .top3-stat-value {
-    text-align: left;
-  }
 }

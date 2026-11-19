@@ -3,19 +3,19 @@
 
 set -e
 
-echo "🍺 Brewery Tap Display - Docker Startup"
+echo " Brewery Tap Display - Docker Startup"
 echo "========================================"
 
 # Check if Docker is running
 if ! docker info >/dev/null 2>&1; then
-    echo "❌ Docker is not running. Please start Docker first."
+    echo " Docker is not running. Please start Docker first."
     exit 1
 fi
 
 # Check if config.json has placeholder tokens
 if grep -q "KEG_AUTH_TOKEN" config.json; then
     echo ""
-    echo "⚠️  WARNING: config.json still contains placeholder auth tokens!"
+    echo "  WARNING: config.json still contains placeholder auth tokens!"
     echo "   You need to:"
     echo "   1. Configure your Plaato device(s) with auth tokens (see below)"
     echo "   2. Edit config.json with your actual 32-char hex auth tokens"
@@ -30,19 +30,19 @@ if grep -q "KEG_AUTH_TOKEN" config.json; then
 fi
 
 echo ""
-echo "📦 Starting containers..."
+echo " Starting containers..."
 docker compose up -d
 
 echo ""
-echo "⏳ Waiting for services to be healthy..."
+echo " Waiting for services to be healthy..."
 sleep 3
 
 # Check service status
 if docker compose ps | grep -q "Up"; then
     echo ""
-    echo "✅ Services started successfully!"
+    echo " Services started successfully!"
     echo ""
-    echo "📍 Access Points:"
+    echo " Access Points:"
     echo "   • Tap Display (your website):     http://localhost:3005"
     echo "   • Plaato Web UI / API:            http://localhost:8085"
     echo "   • Plaato REST API (kegs):         http://localhost:8085/api/kegs"
@@ -60,11 +60,11 @@ echo "      - Enter WiFi (2.4GHz only), auth token, and host: ${LOCAL_IP}:1234"
     echo "   3. Update config.json with your device auth tokens"
     echo "   4. Restart: docker compose restart tap_display"
     echo ""
-    echo "📝 View logs: docker compose logs -f"
-    echo "🛑 Stop:      docker compose down"
+    echo " View logs: docker compose logs -f"
+    echo " Stop:      docker compose down"
 else
     echo ""
-    echo "❌ Some services failed to start. Check logs:"
+    echo " Some services failed to start. Check logs:"
     docker compose logs
     exit 1
 fi
