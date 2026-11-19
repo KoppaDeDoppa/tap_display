@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard — Brewery Tap Display</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="header">
+    <h1 class="venue-name">BODENBAR MADAFAKKA!!</h1>
+    <a href="/" class="header-link">← Tappskjerm</a>
+    <div class="status-indicator" id="connectionStatus">
+      <span class="status-dot"></span>
+      <span class="status-text">Kobler til...</span>
+    </div>
+  </header>
+
+  <main class="taps-grid" id="leaderboardGrid">
+    <div id="leaderboard"></div>
+  </main>
+
+  <footer class="footer">
+    <div class="last-updated" id="lastUpdated">Sist oppdatert: --</div>
+    <div class="version">Ledertavle v0.3.8</div>
+  </footer>
+
+  <script src="leaderboard.js"></script>
+</body>
+</html>

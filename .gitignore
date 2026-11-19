@@ -2,3 +2,6 @@
 .env
 .env.*
 !.env.example
+
+# Dependencies — installed via npm install, never committed
+node_modules/

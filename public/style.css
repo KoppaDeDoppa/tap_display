@@ -167,6 +167,28 @@ body {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
+.header-link {
+  margin-left: 24px;
+  color: var(--accent-violet-light);
+  text-decoration: none;
+  font-size: clamp(16px, 0.95vw, 21px);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.header-link:hover { color: var(--accent-violet); }
+
+.footer-link { color: var(--accent-violet-light); text-decoration: none; font-size: clamp(14px, 0.85vw, 18px); font-weight: 600; white-space: nowrap; }
+.footer-link:hover { color: var(--accent-violet); }
+
+/* Standalone leaderboard screen — /leaderboard, meant for a second display.
+   The wrapper passes the full screen height down to .leaderboard-container
+   (flex: 1) so it stretches to the bottom, matching the main tap display. */
+#leaderboard {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.5; transform: scale(0.86); }
@@ -570,6 +592,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius);
   box-shadow: 0 12px 34px var(--shadow-color), inset 0 1px rgba(255,255,255,0.035);
+  flex: 1;
   min-height: clamp(440px, 65vh, 850px);
 }
 

@@ -26,11 +26,17 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
   }
   const estimated = createEstimatedPoller({ origin: env.POS_SERVER_URL || '', secret: env.KEG_TRACKING_SECRET || '',
     fetchImpl, onChange: kegs => broadcastToFrontend(store.estimated(kegs)) });
+  let lastLeaderboard = null;
   const leaderboard = createLeaderboardPoller({ origin: env.POS_SERVER_URL || '', secret: env.KEG_TRACKING_SECRET || '',
-    fetchImpl, onChange: data => broadcastToFrontend({ type: 'leaderboard', ...validateLeaderboard(data) }) });
+    fetchImpl, onChange: data => {
+      const validated = validateLeaderboard(data);
+      if (validated) lastLeaderboard = validated;
+      broadcastToFrontend({ type: 'leaderboard', ...validated });
+    } });
   const paymentDisplay = createPaymentDisplay({ secret: env.PAYMENT_DISPLAY_SECRET || '',
     imagePath: env.VIPPS_QR_IMAGE_PATH, broadcast: broadcastToFrontend });
   app.use(express.static(path.join(__dirname, 'public')));
+  app.get('/leaderboard', (_req, res) => res.sendFile(path.join(__dirname, 'public/leaderboard.html')));
   app.use('/api', paymentDisplay.router);
   app.get('/health', (_req, res) => res.json({ status: 'ok', server: 'tap-display', plaatoServer: plaatoBaseUrl }));
   app.get('/api/config', (_req, res) => res.json({ taps: publicTaps }));
@@ -95,6 +101,7 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
     client.send(JSON.stringify({ type: 'config', taps: publicTaps }));
     client.send(JSON.stringify(store.snapshot()));
     client.send(JSON.stringify(paymentDisplay.snapshot()));
+    if (lastLeaderboard) client.send(JSON.stringify({ type: 'leaderboard', ...lastLeaderboard }));
     client.on('close', () => frontendClients.delete(client));
     client.on('error', () => frontendClients.delete(client));
   });
