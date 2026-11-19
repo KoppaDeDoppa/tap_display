@@ -1,4 +1,5 @@
 /** Display proxy with independent Plaato and POS estimated-keg sources. */
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const { WebSocket, WebSocketServer } = require('ws');

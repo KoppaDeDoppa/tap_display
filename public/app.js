@@ -268,7 +268,7 @@ function startViewCycle() {
 
 function renderLeaderboard() {
   tapsGrid.innerHTML = '';
-  const data = window.tapDisplay?.leaderboardData;
+  const data = leaderboardData;
   const periodLabel = data?.period ? `Måned: ${data.period}` : '';
 
   // Merge byDrinks and bySpent by name to get both values per person
