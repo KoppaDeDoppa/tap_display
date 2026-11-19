@@ -268,11 +268,12 @@ function startViewCycle() {
 
 function renderLeaderboard() {
   tapsGrid.innerHTML = '';
-  const periodLabel = leaderboardData?.period ? `Måned: ${leaderboardData.period}` : '';
+  const data = window.tapDisplay?.leaderboardData;
+  const periodLabel = data?.period ? `Måned: ${data.period}` : '';
 
   // Merge byDrinks and bySpent by name to get both values per person
-  const byDrinks = leaderboardData?.byDrinks || [];
-  const bySpent = leaderboardData?.bySpent || [];
+  const byDrinks = data?.byDrinks || [];
+  const bySpent = data?.bySpent || [];
   const nameToDrinks = new Map(byDrinks.map(d => [d.name, d.value]));
   const nameToSpent = new Map(bySpent.map(s => [s.name, s.value]));
   const allNames = new Set([...nameToDrinks.keys(), ...nameToSpent.keys()]);
@@ -284,10 +285,10 @@ function renderLeaderboard() {
     spent: nameToSpent.get(name) || 0
   })).sort((a, b) => b.drinks - a.drinks || b.spent - a.spent);
 
-  // Take top 22
-  const top22 = combined.slice(0, 22);
-  const top3 = top22.slice(0, 3);
-  const rest = top22.slice(3);
+  // Take top 13 (3 top + 10 rest)
+  const top13 = combined.slice(0, 13);
+  const top3 = top13.slice(0, 3);
+  const rest = top13.slice(3);
 
   const container = document.createElement('div');
   container.className = 'leaderboard-container';
@@ -306,19 +307,19 @@ function renderLeaderboard() {
   const restSection = container.querySelector('#restSection');
 
   // Find max values for bar scaling
-  const maxDrinks = Math.max(...top22.map(p => p.drinks), 1);
-  const maxSpent = Math.max(...top22.map(p => p.spent), 1);
+  const maxDrinks = Math.max(...top13.map(p => p.drinks), 1);
+  const maxSpent = Math.max(...top13.map(p => p.spent), 1);
 
-  // Render top 3 in order: #1, #2, #3 (with rank classes for staggering: #2 left, #1 middle higher, #3 right)
-  const top3Order = [0, 1, 2]; // indices: 0=#1, 1=#2, 2=#3
-  const rankLabels = [`#1 Plass`, `#2 Plass`, `#3 Plass`];
-  const rankClasses = ['rank-2', 'rank-1', 'rank-3']; // #1 gets rank-1 (highest), #2 gets rank-2 (left), #3 gets rank-3 (right)
+  // Render top 3 in order: #2, #1, #3 (visual: #2 left, #1 middle highest, #3 right)
+  const top3Order = [1, 0, 2]; // indices: 1=#2, 0=#1, 2=#3
+  const rankLabels = [`#2 Plass`, `#1 Plass`, `#3 Plass`];
+  const rankClasses = ['rank-2', 'rank-1', 'rank-3']; // #2 gets rank-2 (left), #1 gets rank-1 (middle highest), #3 gets rank-3 (right)
 
   top3Order.forEach((originalIndex, displayIndex) => {
     const person = top3[originalIndex];
     if (!person) return;
     const rank = originalIndex + 1;
-    const rankLabel = rankLabels[originalIndex];
+    const rankLabel = rankLabels[displayIndex];
     const rankClass = rankClasses[displayIndex];
 
     const card = document.createElement('div');
@@ -338,30 +339,42 @@ function renderLeaderboard() {
     top3Section.appendChild(card);
   });
 
-  // Render rest (4-22) in columns of 4
+  // Render rest (4-13) in two columns: left=4-8, right=9-13
   if (rest.length > 0) {
     const grid = document.createElement('div');
     grid.className = 'leaderboard-rest-grid';
 
-    // Split rest into chunks of 4
-    const columns = [];
-    for (let i = 0; i < rest.length; i += 4) {
-      columns.push(rest.slice(i, i + 4));
-    }
+    // Split rest into two equal columns
+    const mid = Math.ceil(rest.length / 2);
+    const leftColumn = rest.slice(0, mid); // ranks 4-8 (upper half)
+    const rightColumn = rest.slice(mid);   // ranks 9-13 (lower half)
 
-    columns.forEach((column, colIndex) => {
-      const colDiv = document.createElement('div');
-      colDiv.className = 'leaderboard-rest-column';
-      const list = document.createElement('ol');
-      column.forEach((person, index) => {
-        const rank = colIndex * 4 + index + 4;
-        const li = document.createElement('li');
-        li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter, (${person.spent})kr</span>`;
-        list.appendChild(li);
-      });
-      colDiv.appendChild(list);
-      grid.appendChild(colDiv);
+    // Left column (4-8)
+    const leftDiv = document.createElement('div');
+    leftDiv.className = 'leaderboard-rest-column';
+    const leftList = document.createElement('ol');
+    leftColumn.forEach((person, index) => {
+      const rank = index + 4;
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter, (${person.spent})kr</span>`;
+      leftList.appendChild(li);
     });
+    leftDiv.appendChild(leftList);
+    grid.appendChild(leftDiv);
+
+    // Right column (9-13)
+    const rightDiv = document.createElement('div');
+    rightDiv.className = 'leaderboard-rest-column';
+    const rightList = document.createElement('ol');
+    rightColumn.forEach((person, index) => {
+      const rank = mid + index + 4;
+      const li = document.createElement('li');
+      li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter, (${person.spent})kr</span>`;
+      rightList.appendChild(li);
+    });
+    rightDiv.appendChild(rightList);
+    grid.appendChild(rightDiv);
+
     restSection.appendChild(grid);
   } else if (top3.length === 0) {
     top3Section.innerHTML = '<p class="leaderboard-empty">Ingen data ennå</p>';
