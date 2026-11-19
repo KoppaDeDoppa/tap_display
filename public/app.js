@@ -263,7 +263,7 @@ function startViewCycle() {
       viewMode = 'kegs';
       renderTapCards();
     }
-  }, 60000);
+  }, 30000);
 }
 
 function renderLeaderboard() {
@@ -271,19 +271,14 @@ function renderLeaderboard() {
   const data = leaderboardData;
   const periodLabel = data?.period ? `Måned: ${data.period}` : '';
 
-  // Merge byDrinks and bySpent by name to get both values per person
+  // Use only byDrinks for leaderboard (show units only, not spent)
   const byDrinks = data?.byDrinks || [];
-  const bySpent = data?.bySpent || [];
-  const nameToDrinks = new Map(byDrinks.map(d => [d.name, d.value]));
-  const nameToSpent = new Map(bySpent.map(s => [s.name, s.value]));
-  const allNames = new Set([...nameToDrinks.keys(), ...nameToSpent.keys()]);
 
-  // Create combined entries, sort by drinks desc then spent desc
-  const combined = Array.from(allNames).map(name => ({
-    name,
-    drinks: nameToDrinks.get(name) || 0,
-    spent: nameToSpent.get(name) || 0
-  })).sort((a, b) => b.drinks - a.drinks || b.spent - a.spent);
+  // Create entries sorted by drinks desc
+  const combined = byDrinks.map(d => ({
+    name: d.name,
+    drinks: d.value
+  })).sort((a, b) => b.drinks - a.drinks);
 
   // Take top 13 (3 top + 10 rest)
   const top13 = combined.slice(0, 13);
@@ -306,10 +301,6 @@ function renderLeaderboard() {
   const top3Section = container.querySelector('#top3Section');
   const restSection = container.querySelector('#restSection');
 
-  // Find max values for bar scaling
-  const maxDrinks = Math.max(...top13.map(p => p.drinks), 1);
-  const maxSpent = Math.max(...top13.map(p => p.spent), 1);
-
   // Render top 3 in order: #2, #1, #3 (visual: #2 left, #1 middle highest, #3 right)
   const top3Order = [1, 0, 2]; // indices: 1=#2, 0=#1, 2=#3
   const rankLabels = [`#2 Plass`, `#1 Plass`, `#3 Plass`];
@@ -330,9 +321,6 @@ function renderLeaderboard() {
       <div class="top3-stats">
         <div class="top3-stat-row">
           <span class="top3-stat-value">${person.drinks} enheter</span>
-        </div>
-        <div class="top3-stat-row">
-          <span class="top3-stat-value">${person.spent} kr</span>
         </div>
       </div>
     `;
@@ -356,7 +344,7 @@ function renderLeaderboard() {
     leftColumn.forEach((person, index) => {
       const rank = index + 4;
       const li = document.createElement('li');
-      li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter, (${person.spent})kr</span>`;
+      li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter</span>`;
       leftList.appendChild(li);
     });
     leftDiv.appendChild(leftList);
@@ -369,7 +357,7 @@ function renderLeaderboard() {
     rightColumn.forEach((person, index) => {
       const rank = mid + index + 4;
       const li = document.createElement('li');
-      li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter, (${person.spent})kr</span>`;
+      li.innerHTML = `<span class="rest-rank">#${rank}</span> <span class="rest-name">${escapeHtml(person.name)}</span> <span class="rest-stats">${person.drinks} enheter</span>`;
       rightList.appendChild(li);
     });
     rightDiv.appendChild(rightList);

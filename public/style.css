@@ -472,10 +472,11 @@ body {
   .top3-name { font-size: clamp(16px, 1vw, 20px) !important; margin-bottom: clamp(8px, 1vw, 14px) !important; }
   .top3-stats { gap: clamp(6px, 0.8vw, 10px) !important; }
   .top3-stat-row { gap: 8px !important; }
-  .top3-stat-value { font-size: clamp(13px, 0.8vw, 16px) !important; }
+  .top3-stat-value { font-size: clamp(20px, 1.3vw, 28px) !important; font-weight: 700 !important; }
 
-  .leaderboard-rest-grid { gap: clamp(14px, 1.5vw, 22px) !important; }
-  .leaderboard-rest-column { gap: 6px !important; }
+  .leaderboard-rest { flex: 1 !important; display: flex !important; flex-direction: column !important; }
+  .leaderboard-rest-grid { gap: clamp(14px, 1.5vw, 22px) !important; align-items: center !important; flex: 1 !important; }
+  .leaderboard-rest-column { gap: 6px !important; justify-content: center !important; min-height: 160px !important; }
   .leaderboard-rest-column li {
     gap: 10px !important;
     padding: 8px 12px !important;
@@ -676,16 +677,23 @@ body {
 /* Rest list (4-13) - two columns: left=9-13, right=4-8 */
 .leaderboard-rest {
   width: 100%;
+  flex: 1; /* take remaining space in leaderboard-container flex column */
+  display: flex;
+  flex-direction: column;
 }
 .leaderboard-rest-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: clamp(16px, 2vw, 32px);
+  align-items: center; /* center columns vertically */
+  flex: 1; /* take remaining space in leaderboard-rest flex column */
 }
 .leaderboard-rest-column {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  justify-content: center; /* center items vertically within column */
+  min-height: 200px; /* ensure enough space for centering to be visible */
 }
 .leaderboard-rest-column ol {
   list-style: none;
