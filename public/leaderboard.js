@@ -178,9 +178,13 @@ function renderLeaderboard() {
       <div class="leaderboard-ticker-content">${escaped}</div>
       <div class="leaderboard-ticker-content">${escaped}</div>
     `;
-    // Keep speed roughly consistent regardless of text length
-    track.style.animationDuration = `${Math.max(16, tickerText.length * 0.14)}s`;
     tickerSection.appendChild(track);
+    // Scroll at a steady pixels-per-second so the full text always shows,
+    // no matter how long the message is.
+    const content = track.querySelector('.leaderboard-ticker-content');
+    const width = content ? content.offsetWidth : 0;
+    const pxPerSecond = 60;
+    track.style.animationDuration = `${Math.max(20, width / pxPerSecond)}s`;
   } else {
     tickerSection.innerHTML = '';
   }
