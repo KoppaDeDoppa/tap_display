@@ -175,7 +175,7 @@ function updateLastUpdated() {
     hour: '2-digit',
     minute: '2-digit'
   });
-  lastUpdatedEl.textContent = `Sist oppdatert: ${timeStr}`;
+  lastUpdatedEl.textContent = `Last updated: ${timeStr}`;
 }
 
 // Update connection status indicator
