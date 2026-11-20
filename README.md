@@ -195,6 +195,7 @@ All services must be on the same LAN. For remote access, use a reverse proxy (ng
 | `PLAATO_SERVER` | http://open_plaato_keg:8085 | Plaato API endpoint |
 | `SERVER_PORT` | 3005 | HTTP port for dashboard |
 | `NODE_ENV` | production | Node environment |
+| `LEADERBOARD_TICKER` | - | Custom rolling text shown between the top 3 and the rest on the standalone `/leaderboard` page. Can also be set as `leaderboardTicker` in `config.json`. Leave empty to hide the ticker. |
 
 ## Estimated Helles tap (BodenBar integration)
 

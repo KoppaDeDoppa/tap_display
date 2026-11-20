@@ -38,6 +38,7 @@ services:
       - KEG_TRACKING_SECRET=${KEG_TRACKING_SECRET:-}
       # Optional BodenBar payment display (same secret on both servers, >=32 characters).
       - PAYMENT_DISPLAY_SECRET=${PAYMENT_DISPLAY_SECRET:-}
+      - LEADERBOARD_TICKER=${LEADERBOARD_TICKER:-}
     volumes:
       # Mount config.json for easy editing without rebuilding
       - ./config.json:/app/config.json:ro

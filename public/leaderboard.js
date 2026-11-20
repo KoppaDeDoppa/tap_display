@@ -40,7 +40,8 @@ function connectWebSocket() {
         leaderboardData = {
           byDrinks: message.byDrinks || [],
           bySpent: message.bySpent || [],
-          period: message.period || ''
+          period: message.period || '',
+          ticker: message.ticker || ''
         };
         renderLeaderboard();
       }
@@ -88,6 +89,7 @@ function renderLeaderboard() {
       <p class="leaderboard-period">${periodLabel}</p>
     </header>
     <section class="leaderboard-top3" id="top3Section"></section>
+    <section class="leaderboard-ticker" id="tickerSection"></section>
     <section class="leaderboard-rest" id="restSection"></section>
   `;
   leaderboardRoot.innerHTML = '';
@@ -163,6 +165,24 @@ function renderLeaderboard() {
     restSection.appendChild(grid);
   } else if (top3.length === 0) {
     top3Section.innerHTML = '<p class="leaderboard-empty">Ingen data ennå</p>';
+  }
+
+  // Rolling ticker between top 3 and the rest (news-style marquee)
+  const tickerText = data?.ticker;
+  const tickerSection = container.querySelector('#tickerSection');
+  if (tickerText) {
+    const escaped = escapeHtml(tickerText);
+    const track = document.createElement('div');
+    track.className = 'leaderboard-ticker-track';
+    track.innerHTML = `
+      <div class="leaderboard-ticker-content">${escaped}</div>
+      <div class="leaderboard-ticker-content">${escaped}</div>
+    `;
+    // Keep speed roughly consistent regardless of text length
+    track.style.animationDuration = `${Math.max(16, tickerText.length * 0.14)}s`;
+    tickerSection.appendChild(track);
+  } else {
+    tickerSection.innerHTML = '';
   }
 
   updateLastUpdated();

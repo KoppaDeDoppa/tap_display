@@ -186,6 +186,9 @@ body {
 #leaderboard {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 100%;
 }
 
@@ -507,6 +510,14 @@ body {
   }
   .rest-rank { font-size: clamp(13px, 0.9vw, 16px) !important; }
   .rest-stats { font-size: clamp(12px, 0.85vw, 15px) !important; }
+
+  .leaderboard-ticker {
+    padding: clamp(12px, 1vw, 18px) clamp(20px, 2vw, 40px) !important;
+  }
+  .leaderboard-ticker-content {
+    font-size: clamp(16px, 1.2vw, 20px) !important;
+    padding: 0 clamp(12px, 1vw, 24px) !important;
+  }
 }
 
 @media (max-width: 800px) {
@@ -569,6 +580,47 @@ body {
     border-radius: 8px !important;
     font-size: clamp(12px, 0.8vw, 14px) !important;
   }
+
+  .leaderboard-ticker {
+    padding: clamp(10px, 1vw, 16px) clamp(16px, 1.5vw, 32px) !important;
+  }
+  .leaderboard-ticker-content {
+    font-size: clamp(15px, 1.1vw, 18px) !important;
+    padding: 0 clamp(10px, 0.8vw, 16px) !important;
+  }
+}
+
+/* Rolling ticker between top 3 and the rest on the standalone leaderboard */
+.leaderboard-ticker {
+  overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: clamp(14px, 1.2vw, 24px) clamp(24px, 2.5vw, 48px);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  background: rgba(4, 7, 14, 0.55);
+}
+.leaderboard-ticker-track {
+  display: flex;
+  width: max-content;
+  animation: leaderboard-ticker-roll var(--ticker-duration, 18s) linear infinite;
+}
+.leaderboard-ticker-track:hover {
+  animation-play-state: paused;
+}
+.leaderboard-ticker-content {
+  flex-shrink: 0;
+  padding: 0 clamp(16px, 1.5vw, 32px);
+  color: var(--text-secondary);
+  font-size: clamp(18px, 1.4vw, 24px);
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+@keyframes leaderboard-ticker-roll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
 }
 
 @media print {
@@ -593,6 +645,7 @@ body {
   border-radius: var(--border-radius);
   box-shadow: 0 12px 34px var(--shadow-color), inset 0 1px rgba(255,255,255,0.035);
   flex: 1;
+  min-width: 0;
   min-height: clamp(440px, 65vh, 850px);
 }
 

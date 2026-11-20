@@ -16,6 +16,7 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
   const server = http.createServer(app);
   const wss = new WebSocketServer({ server, path: '/ws' });
   const store = createKegStore(taps);
+  const leaderboardTicker = env.LEADERBOARD_TICKER || config.leaderboardTicker || '';
   let plaatoWs, reconnectTimer, stopped = false, started = false;
   let upstreamRevision = 0;
   const frontendClients = new Set();
@@ -31,7 +32,7 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
     fetchImpl, onChange: data => {
       const validated = validateLeaderboard(data);
       if (validated) lastLeaderboard = validated;
-      broadcastToFrontend({ type: 'leaderboard', ...validated });
+      broadcastToFrontend({ type: 'leaderboard', ...validated, ticker: leaderboardTicker });
     } });
   const paymentDisplay = createPaymentDisplay({ secret: env.PAYMENT_DISPLAY_SECRET || '',
     imagePath: env.VIPPS_QR_IMAGE_PATH, broadcast: broadcastToFrontend });
@@ -101,7 +102,7 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
     client.send(JSON.stringify({ type: 'config', taps: publicTaps }));
     client.send(JSON.stringify(store.snapshot()));
     client.send(JSON.stringify(paymentDisplay.snapshot()));
-    if (lastLeaderboard) client.send(JSON.stringify({ type: 'leaderboard', ...lastLeaderboard }));
+    if (lastLeaderboard) client.send(JSON.stringify({ type: 'leaderboard', ...lastLeaderboard, ticker: leaderboardTicker }));
     client.on('close', () => frontendClients.delete(client));
     client.on('error', () => frontendClients.delete(client));
   });
