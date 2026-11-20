@@ -65,7 +65,7 @@ function scheduleReconnect() {
 
 function renderLeaderboard() {
   const data = leaderboardData;
-  const periodLabel = data?.period ? `Måned: ${escapeHtml(data.period)}` : '';
+  const periodLabel = data?.period ? ` ${escapeHtml(data.period)}` : '';
 
   // Use only byDrinks for leaderboard (show units only, not spent)
   const byDrinks = data?.byDrinks || [];

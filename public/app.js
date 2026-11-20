@@ -269,7 +269,7 @@ function startViewCycle() {
 function renderLeaderboard() {
   tapsGrid.innerHTML = '';
   const data = leaderboardData;
-  const periodLabel = data?.period ? `Måned: ${data.period}` : '';
+  const periodLabel = data?.period ? ` ${data.period}` : '';
 
   // Use only byDrinks for leaderboard (show units only, not spent)
   const byDrinks = data?.byDrinks || [];
