@@ -14,6 +14,8 @@ const lastUpdatedEl = document.getElementById('lastUpdated');
 let ws = null;
 let reconnectTimer = null;
 let leaderboardData = null;
+let tickerTrack = null; // persists across re-renders so the marquee isn't restarted
+let container = null; // leaderboard container, created once and updated in place
 
 document.addEventListener('DOMContentLoaded', connectWebSocket);
 
@@ -81,30 +83,38 @@ function renderLeaderboard() {
   const top3 = top13.slice(0, 3);
   const rest = top13.slice(3);
 
-  const container = document.createElement('div');
-  container.className = 'leaderboard-container';
-  container.innerHTML = `
-    <header class="leaderboard-header">
-      <h2>Leaderboard</h2>
-      <p class="leaderboard-period">${periodLabel}</p>
-    </header>
-    <section class="leaderboard-top3" id="top3Section"></section>
-    <section class="leaderboard-ticker" id="tickerSection"></section>
-    <section class="leaderboard-rest" id="restSection"></section>
-  `;
-  leaderboardRoot.innerHTML = '';
-  leaderboardRoot.appendChild(container);
-  // Single-column grid so the leaderboard card takes full width, matching the main screen
-  leaderboardGrid.style.gridTemplateColumns = '1fr';
+  // Create the container shell once; its inner sections are updated in place
+  // on every render so the ticker marquee animation isn't restarted.
+  if (!container) {
+    container = document.createElement('div');
+    container.className = 'leaderboard-container';
+    container.innerHTML = `
+      <header class="leaderboard-header">
+        <h2>Leaderboard</h2>
+        <p class="leaderboard-period"></p>
+      </header>
+      <section class="leaderboard-top3" id="top3Section"></section>
+      <section class="leaderboard-ticker" id="tickerSection"></section>
+      <section class="leaderboard-rest" id="restSection"></section>
+    `;
+    leaderboardRoot.innerHTML = '';
+    leaderboardRoot.appendChild(container);
+    // Single-column grid so the leaderboard card takes full width, matching the main screen
+    leaderboardGrid.style.gridTemplateColumns = '1fr';
+  }
 
   const top3Section = container.querySelector('#top3Section');
+  const tickerSection = container.querySelector('#tickerSection');
   const restSection = container.querySelector('#restSection');
+  const periodEl = container.querySelector('.leaderboard-period');
+  periodEl.innerHTML = periodLabel;
 
   // Render top 3 in order: #2, #1, #3 (visual: #2 left, #1 middle highest, #3 right)
   const top3Order = [1, 0, 2]; // indices: 1=#2, 0=#1, 2=#3
   const rankLabels = [`#2 Plass`, `#1 Plass`, `#3 Plass`];
   const rankClasses = ['rank-2', 'rank-1', 'rank-3']; // #2 gets rank-2 (left), #1 gets rank-1 (middle highest), #3 gets rank-3 (right)
 
+  top3Section.innerHTML = '';
   top3Order.forEach((originalIndex, displayIndex) => {
     const person = top3[originalIndex];
     if (!person) return;
@@ -130,6 +140,7 @@ function renderLeaderboard() {
   if (rest.length > 0) {
     const grid = document.createElement('div');
     grid.className = 'leaderboard-rest-grid';
+    restSection.innerHTML = '';
 
     // Split rest into two equal columns
     const mid = Math.ceil(rest.length / 2);
@@ -164,29 +175,42 @@ function renderLeaderboard() {
 
     restSection.appendChild(grid);
   } else if (top3.length === 0) {
+    restSection.innerHTML = '';
     top3Section.innerHTML = '<p class="leaderboard-empty">Ingen data ennå</p>';
   }
 
-  // Rolling ticker between top 3 and the rest (news-style marquee)
+  // Rolling ticker between top 3 and the rest (news-style marquee).
+  // The track element is created once and reused across re-renders so the
+  // marquee animation isn't restarted (and cut off) on every leaderboard update.
   const tickerText = data?.ticker;
-  const tickerSection = container.querySelector('#tickerSection');
   if (tickerText) {
-    const escaped = escapeHtml(tickerText);
-    const track = document.createElement('div');
-    track.className = 'leaderboard-ticker-track';
-    track.innerHTML = `
-      <div class="leaderboard-ticker-content">${escaped}</div>
-      <div class="leaderboard-ticker-content">${escaped}</div>
-    `;
-    tickerSection.appendChild(track);
-    // Scroll at a steady pixels-per-second so the full text always shows,
-    // no matter how long the message is.
-    const content = track.querySelector('.leaderboard-ticker-content');
-    const width = content ? content.offsetWidth : 0;
-    const pxPerSecond = 60;
-    track.style.animationDuration = `${Math.max(20, width / pxPerSecond)}s`;
-  } else {
-    tickerSection.innerHTML = '';
+    if (!tickerTrack) {
+      tickerTrack = document.createElement('div');
+      tickerTrack.className = 'leaderboard-ticker-track';
+      tickerTrack.innerHTML = `
+        <div class="leaderboard-ticker-content"></div>
+        <div class="leaderboard-ticker-content"></div>
+      `;
+    }
+    const contents = tickerTrack.querySelectorAll('.leaderboard-ticker-content');
+    const first = contents[0];
+    const changed = first?.textContent !== tickerText;
+    if (changed) {
+      // textContent is XSS-safe (no HTML parsing) and avoids re-escaping
+      contents.forEach((c) => { c.textContent = tickerText; });
+    }
+    // attach to DOM so offsetWidth measures correctly; moving an existing node
+    // does not restart the CSS marquee animation
+    if (tickerTrack.parentElement !== tickerSection) {
+      tickerSection.appendChild(tickerTrack);
+    }
+    if (changed) {
+      const width = first.offsetWidth || 0;
+      const pxPerSecond = 60;
+      tickerTrack.style.animationDuration = `${Math.max(20, width / pxPerSecond)}s`;
+    }
+  } else if (tickerTrack && tickerTrack.parentElement === tickerSection) {
+    tickerSection.removeChild(tickerTrack);
   }
 
   updateLastUpdated();
