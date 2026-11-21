@@ -78,7 +78,7 @@ function createTapCard(tap, index) {
       <div class="tap-number">${tap.name}</div>
       <div class="tap-beer-info">
         <div class="tap-beer-name">${escapeHtml(tap.beerName)}</div>
-        <div class="tap-beer-style">${escapeHtml(tap.beerStyle)}</div>
+        <div class="tap-beer-style">${escapeHtml(tap.beerStyle)}${tap.abv != null ? `<span class="tap-beer-abv"> ${escapeHtml(String(tap.abv))}%</span>` : ''}</div>
       </div>
     </header>
 

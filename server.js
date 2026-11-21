@@ -20,7 +20,7 @@ function createDisplayServer({ config = JSON.parse(fs.readFileSync(path.join(__d
   let plaatoWs, reconnectTimer, stopped = false, started = false;
   let upstreamRevision = 0;
   const frontendClients = new Set();
-  const publicTaps = taps.map(({ id, name, beerName, beerStyle, source }) => ({ id, name, beerName, beerStyle, source: source || 'plaato' }));
+  const publicTaps = taps.map(({ id, name, beerName, beerStyle, source, abv }) => ({ id, name, beerName, beerStyle, source: source || 'plaato', abv }));
   function broadcastToFrontend(message) {
     const data = JSON.stringify(message);
     for (const client of frontendClients) if (client.readyState === WebSocket.OPEN) client.send(data);

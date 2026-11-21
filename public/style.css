@@ -282,6 +282,12 @@ body {
   letter-spacing: 0.035em;
 }
 
+.tap-beer-abv {
+  color: var(--text-muted);
+  font-size: clamp(15px, 0.9vw, 20px);
+  font-weight: 600;
+}
+
 .volume-section {
   flex: 1;
   min-height: 210px;
